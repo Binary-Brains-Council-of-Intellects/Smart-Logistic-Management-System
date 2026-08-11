@@ -1,11 +1,12 @@
-import './App.css'
+import { RouterProvider } from 'react-router-dom'
+import Router from './router/Router'
+import { SLMSProvider } from './context/SLMSContext'
 
 function App() {
   return (
-    <>
-      <h1 className='bg-red-50'>tahmid</h1>
-      <h1 className='bg-red-50'>tahmid</h1>
-    </>
+    <SLMSProvider>
+      <RouterProvider router={Router} />
+    </SLMSProvider>
   )
 }
 
