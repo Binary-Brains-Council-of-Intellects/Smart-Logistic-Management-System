@@ -11,13 +11,14 @@ import { Bar } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
-const ProductPopularityChart = ({ data }) => {
+const ProductPopularityChart = ({ data = [] }) => {
+  const safeData = Array.isArray(data) ? data : [];
   const chartData = {
-    labels: data.map((item) => item.name),
+    labels: safeData.map((item) => item.name || ''),
     datasets: [
       {
         label: 'Units Sold',
-        data: data.map((item) => item.sold),
+        data: safeData.map((item) => item.sold || 0),
         backgroundColor: '#059669',
         borderRadius: 6
       }

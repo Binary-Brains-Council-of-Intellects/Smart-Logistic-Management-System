@@ -10,13 +10,17 @@ import { DollarSign, Award, TrendingUp, RotateCcw, Calendar } from 'lucide-react
 import { useSLMS } from '../context/SLMSContext';
 
 const Reports = () => {
-  const { mockMonthlyRevenue, mockPopularProducts, mockSeasonalTrends, exchanges } = useSLMS();
+  const { mockMonthlyRevenue = [], mockPopularProducts = [], mockSeasonalTrends = [], exchanges = [] } = useSLMS();
   const [selectedYear, setSelectedYear] = useState('2026');
 
+  const safeMonthlyRev = Array.isArray(mockMonthlyRevenue) ? mockMonthlyRevenue : [];
+  const safePopularProds = Array.isArray(mockPopularProducts) ? mockPopularProducts : [];
+  const safeTrends = Array.isArray(mockSeasonalTrends) ? mockSeasonalTrends : [];
+
   // Revenue summary metrics
-  const totalRev = mockMonthlyRevenue.reduce((sum, item) => sum + item.revenue, 0);
-  const avgRev = Math.round(totalRev / mockMonthlyRevenue.length);
-  const maxRevMonth = mockMonthlyRevenue.reduce((max, item) => (item.revenue > max.revenue ? item : max), mockMonthlyRevenue[0]);
+  const totalRev = safeMonthlyRev.reduce((sum, item) => sum + (item?.revenue || 0), 0);
+  const avgRev = safeMonthlyRev.length > 0 ? Math.round(totalRev / safeMonthlyRev.length) : 0;
+  const maxRevMonth = safeMonthlyRev.reduce((max, item) => ((item?.revenue || 0) > (max?.revenue || 0) ? item : max), safeMonthlyRev[0] || null);
 
   return (
     <div className="space-y-6">

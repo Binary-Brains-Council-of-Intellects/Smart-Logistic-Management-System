@@ -45,27 +45,33 @@ const Products = () => {
     setExpiryFilter('');
   };
 
+  const safeProducts = Array.isArray(products) ? products : [];
+
   // Filter logic
-  const filteredProducts = products.filter((p) => {
-    // Search matching
+  const filteredProducts = safeProducts.filter((p) => {
+    if (!p) return false;
+    const name = p.name || '';
+    const id = p.id || p.productId || '';
+    const batch = p.batchNumber || '';
     const matchesSearch =
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.batchNumber.toLowerCase().includes(searchTerm.toLowerCase());
+      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      batch.toLowerCase().includes(searchTerm.toLowerCase());
 
     // Category matching
     const matchesCategory = categoryFilter ? p.category === categoryFilter : true;
 
     // Stock status matching
     let matchesStock = true;
-    if (stockFilter === 'IN_STOCK') matchesStock = Number(p.availableQuantity) > 10;
-    if (stockFilter === 'LOW_STOCK') matchesStock = Number(p.availableQuantity) > 0 && Number(p.availableQuantity) <= 10;
-    if (stockFilter === 'OUT_OF_STOCK') matchesStock = Number(p.availableQuantity) === 0;
+    const qty = Number(p.availableQuantity || 0);
+    if (stockFilter === 'IN_STOCK') matchesStock = qty > 10;
+    if (stockFilter === 'LOW_STOCK') matchesStock = qty > 0 && qty <= 10;
+    if (stockFilter === 'OUT_OF_STOCK') matchesStock = qty === 0;
 
     // Expiry status matching
     let matchesExpiry = true;
     if (expiryFilter) {
-      if (p.type !== 'PerishableProduct' || !p.expiryDate) {
+      if (!p.expiryDate) {
         matchesExpiry = false;
       } else {
         const today = new Date();

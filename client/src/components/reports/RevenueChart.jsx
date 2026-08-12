@@ -12,13 +12,14 @@ import { Bar } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-const RevenueChart = ({ data }) => {
+const RevenueChart = ({ data = [] }) => {
+  const safeData = Array.isArray(data) ? data : [];
   const chartData = {
-    labels: data.map((item) => item.month),
+    labels: safeData.map((item) => item.month || ''),
     datasets: [
       {
         label: 'Monthly Revenue (৳)',
-        data: data.map((item) => item.revenue),
+        data: safeData.map((item) => item.revenue || 0),
         backgroundColor: '#2563eb',
         borderRadius: 8,
         hoverBackgroundColor: '#1d4ed8'

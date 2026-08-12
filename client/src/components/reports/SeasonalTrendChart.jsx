@@ -11,13 +11,14 @@ import { Bar } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
-const SeasonalTrendChart = ({ data }) => {
+const SeasonalTrendChart = ({ data = [] }) => {
+  const safeData = Array.isArray(data) ? data : [];
   const chartData = {
-    labels: data.map((d) => d.season),
+    labels: safeData.map((d) => d.season || ''),
     datasets: [
       {
         label: 'Sales Volume',
-        data: data.map((d) => d.sales),
+        data: safeData.map((d) => d.sales || 0),
         backgroundColor: ['#3b82f6', '#f59e0b', '#d97706', '#0284c7'],
         borderRadius: 8
       }

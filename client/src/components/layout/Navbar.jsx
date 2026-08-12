@@ -5,7 +5,7 @@ import { useSLMS } from '../../context/SLMSContext';
 
 const Navbar = ({ onOpenMobileMenu }) => {
   const location = useLocation();
-  const { user } = useSLMS();
+  const { user, isLiveConnected } = useSLMS();
 
   const getPageTitle = (pathname) => {
     if (pathname.includes('/products')) return 'Product Catalog';
@@ -53,6 +53,15 @@ const Navbar = ({ onOpenMobileMenu }) => {
           <Bell className="w-5 h-5" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-500 rounded-full ring-2 ring-white" />
         </button>
+
+        {/* Live Spring Boot Server Connection Badge */}
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all"
+             title={isLiveConnected ? "Connected to Spring Boot REST Backend (Port 8080)" : "Server not detected, using fallback mode"}>
+          <span className={`w-2 h-2 rounded-full ${isLiveConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
+          <span className={isLiveConnected ? 'text-emerald-700 font-medium text-[11px]' : 'text-slate-500 font-medium text-[11px]'}>
+            {isLiveConnected ? 'Spring Boot Connected' : 'Offline Mode'}
+          </span>
+        </div>
 
         <div className="h-6 w-[1px] bg-slate-200" />
 

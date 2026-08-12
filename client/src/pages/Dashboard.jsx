@@ -34,6 +34,10 @@ const Dashboard = () => {
     mockMonthlyRevenue
   } = useSLMS();
 
+  const safeProducts = Array.isArray(products) ? products : [];
+  const safeOrders = Array.isArray(orders) ? orders : [];
+  const safeLowStock = Array.isArray(lowStockItems) ? lowStockItems : [];
+
   // Category counts for Doughnut chart
   const categoryCounts = {
     ELECTRONICS: 0,
@@ -43,8 +47,8 @@ const Dashboard = () => {
     OTHER: 0
   };
 
-  products.forEach((p) => {
-    if (categoryCounts[p.category] !== undefined) {
+  safeProducts.forEach((p) => {
+    if (p && categoryCounts[p.category] !== undefined) {
       categoryCounts[p.category] += 1;
     } else {
       categoryCounts.OTHER += 1;
@@ -56,11 +60,11 @@ const Dashboard = () => {
     datasets: [
       {
         data: [
-          categoryCounts.ELECTRONICS || 3,
-          categoryCounts.GROCERY || 2,
-          categoryCounts.PHARMACEUTICAL || 2,
-          categoryCounts.CLOTHING || 1,
-          categoryCounts.OTHER || 1
+          categoryCounts.ELECTRONICS,
+          categoryCounts.GROCERY,
+          categoryCounts.PHARMACEUTICAL,
+          categoryCounts.CLOTHING,
+          categoryCounts.OTHER
         ],
         backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6', '#64748b'],
         borderWidth: 2,
@@ -80,7 +84,7 @@ const Dashboard = () => {
     }
   };
 
-  const recentOrders = orders.slice(0, 5);
+  const recentOrders = safeOrders.slice(0, 5);
 
   return (
     <div className="space-y-6">

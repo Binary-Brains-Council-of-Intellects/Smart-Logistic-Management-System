@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
   initialProducts,
   initialOrders,
@@ -10,8 +10,41 @@ import {
   mockPopularProducts,
   mockSeasonalTrends
 } from '../data/mockData';
+import { apiService } from '../services/apiService';
 
 const SLMSContext = createContext();
+
+// Helper functions to normalize data from Spring Boot to match React component expectations
+function normalizeProduct(p) {
+  const id = p.productId || p.id;
+  return {
+    ...p,
+    id,
+    productId: id,
+    availableQuantity: p.availableQuantity !== undefined ? p.availableQuantity : (p.totalQuantity || 0),
+    totalQuantity: p.totalQuantity !== undefined ? p.totalQuantity : (p.availableQuantity || 0),
+    costPrice: Number(p.costPrice || 0),
+    sellingPrice: Number(p.sellingPrice || 0)
+  };
+}
+
+function normalizeOrder(o) {
+  return {
+    ...o,
+    id: o.id,
+    orderDate: o.orderDate ? String(o.orderDate) : new Date().toISOString().split('T')[0],
+    totalAmount: Number(o.totalAmount || 0)
+  };
+}
+
+function normalizeEmployee(e) {
+  return {
+    ...e,
+    id: e.id,
+    baseSalary: Number(e.baseSalary || 0),
+    calculatedPayroll: Number(e.calculatedPayroll || e.baseSalary || 0)
+  };
+}
 
 export const SLMSProvider = ({ children }) => {
   const [user, setUser] = useState({
@@ -20,12 +53,69 @@ export const SLMSProvider = ({ children }) => {
     role: 'Warehouse Operations Manager'
   });
 
-  const [products, setProducts] = useState(initialProducts);
-  const [orders, setOrders] = useState(initialOrders);
-  const [employees, setEmployees] = useState(initialEmployees);
-  const [attendance, setAttendance] = useState(initialAttendance);
-  const [reviews, setReviews] = useState(initialReviews);
-  const [exchanges, setExchanges] = useState(initialExchanges);
+  const [products, setProducts] = useState(initialProducts || []);
+  const [orders, setOrders] = useState(initialOrders || []);
+  const [employees, setEmployees] = useState(initialEmployees || []);
+  const [attendance, setAttendance] = useState(initialAttendance || []);
+  const [reviews, setReviews] = useState(initialReviews || []);
+  const [exchanges, setExchanges] = useState(initialExchanges || []);
+  const [isLiveConnected, setIsLiveConnected] = useState(false);
+
+  // Fetch initial data from Spring Boot backend if available
+  const refreshAllData = async () => {
+    try {
+      const [
+        fetchedProducts,
+        fetchedEmployees,
+        fetchedOrders,
+        fetchedAttendance,
+        fetchedReviews,
+        fetchedReturns
+      ] = await Promise.allSettled([
+        apiService.getProducts(),
+        apiService.getEmployees(),
+        apiService.getOrders(),
+        apiService.getAttendance(),
+        apiService.getReviews(),
+        apiService.getReturns()
+      ]);
+
+      let connected = false;
+
+      if (fetchedProducts.status === 'fulfilled' && Array.isArray(fetchedProducts.value)) {
+        setProducts(fetchedProducts.value.map(normalizeProduct));
+        connected = true;
+      }
+      if (fetchedEmployees.status === 'fulfilled' && Array.isArray(fetchedEmployees.value)) {
+        setEmployees(fetchedEmployees.value.map(normalizeEmployee));
+        connected = true;
+      }
+      if (fetchedOrders.status === 'fulfilled' && Array.isArray(fetchedOrders.value)) {
+        setOrders(fetchedOrders.value.map(normalizeOrder));
+        connected = true;
+      }
+      if (fetchedAttendance.status === 'fulfilled' && Array.isArray(fetchedAttendance.value)) {
+        setAttendance(fetchedAttendance.value);
+        connected = true;
+      }
+      if (fetchedReviews.status === 'fulfilled' && Array.isArray(fetchedReviews.value)) {
+        setReviews(fetchedReviews.value);
+        connected = true;
+      }
+      if (fetchedReturns.status === 'fulfilled' && Array.isArray(fetchedReturns.value)) {
+        setExchanges(fetchedReturns.value);
+        connected = true;
+      }
+
+      setIsLiveConnected(connected);
+    } catch (err) {
+      console.warn('Backend server not connected or empty, defaulting to local state:', err.message);
+    }
+  };
+
+  useEffect(() => {
+    refreshAllData();
+  }, []);
 
   // Authentication Mock
   const login = (username, password) => {
@@ -48,115 +138,316 @@ export const SLMSProvider = ({ children }) => {
     });
   };
 
-  // Product Operations
-  const addProduct = (newProduct) => {
-    const productWithId = {
-      ...newProduct,
-      id: newProduct.id || `PRD-${Math.floor(1000 + Math.random() * 9000)}`,
-      availableQuantity: Number(newProduct.availableQuantity || 0),
-      totalQuantity: Number(newProduct.totalQuantity || 0),
-      expiredQuantity: Number(newProduct.expiredQuantity || 0),
+  // --- Product CRUD Operations ---
+  const addProduct = async (newProduct) => {
+    const productPayload = {
+      name: newProduct.name,
+      sku: newProduct.sku || `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
+      description: newProduct.description || '',
+      category: newProduct.category || 'ELECTRONICS',
+      productType: newProduct.productType || 'NON_PERISHABLE',
+      batchNumber: newProduct.batchNumber || `BAT-${Math.floor(100 + Math.random() * 900)}`,
+      quantity: Number(newProduct.availableQuantity || newProduct.totalQuantity || newProduct.quantity || 0),
       costPrice: Number(newProduct.costPrice || 0),
-      sellingPrice: Number(newProduct.sellingPrice || 0)
+      sellingPrice: Number(newProduct.sellingPrice || 0),
+      productionDate: newProduct.productionDate || null,
+      expiryDate: newProduct.expiryDate || null,
+      storageTemperatureCelsius: newProduct.storageTemperatureCelsius ? Number(newProduct.storageTemperatureCelsius) : null,
+      requiresRefrigeration: Boolean(newProduct.requiresRefrigeration),
+      warrantyMonths: newProduct.warrantyMonths ? Number(newProduct.warrantyMonths) : null,
+      weightKg: newProduct.weightKg ? Number(newProduct.weightKg) : null,
+      fragile: Boolean(newProduct.fragile)
     };
-    setProducts((prev) => [productWithId, ...prev]);
-    return productWithId;
+
+    try {
+      const created = await apiService.createProduct(productPayload);
+      const normalized = normalizeProduct(created);
+      setProducts((prev) => [normalized, ...prev]);
+      return normalized;
+    } catch (err) {
+      console.warn('Backend create product error, storing locally:', err.message);
+      const fallback = normalizeProduct({
+        ...newProduct,
+        id: newProduct.id || `PRD-${Math.floor(1000 + Math.random() * 9000)}`
+      });
+      setProducts((prev) => [fallback, ...prev]);
+      return fallback;
+    }
   };
 
-  const updateProduct = (updatedProduct) => {
-    setProducts((prev) =>
-      prev.map((item) => (item.id === updatedProduct.id ? updatedProduct : item))
-    );
+  const updateProduct = async (updatedProduct) => {
+    const id = updatedProduct.productId || updatedProduct.id;
+    try {
+      const result = await apiService.updateProduct(id, updatedProduct);
+      const normalized = normalizeProduct(result);
+      setProducts((prev) => prev.map((item) => (item.id === id || item.productId === id ? normalized : item)));
+    } catch (err) {
+      console.warn('Backend update product error, applying locally:', err.message);
+      setProducts((prev) =>
+        prev.map((item) => (item.id === id || item.productId === id ? normalizeProduct(updatedProduct) : item))
+      );
+    }
   };
 
-  const deleteProduct = (id) => {
-    setProducts((prev) => prev.filter((item) => item.id !== id));
+  const deleteProduct = async (id) => {
+    try {
+      await apiService.deleteProduct(id);
+    } catch (err) {
+      console.warn('Backend delete product error, deleting locally:', err.message);
+    }
+    setProducts((prev) => prev.filter((item) => item.id !== id && item.productId !== id));
   };
 
-  // Order Operations
-  const createOrder = (orderData) => {
-    const newOrder = {
-      ...orderData,
-      id: `ORD-${Math.floor(9000 + Math.random() * 1000)}`,
-      orderDate: orderData.orderDate || new Date().toISOString().split('T')[0],
-      status: 'PENDING',
-      totalAmount: orderData.items.reduce((sum, i) => sum + i.subtotal, 0)
+  const addStock = async (id, quantity, batchNumber = null) => {
+    try {
+      const updated = await apiService.addStock(id, quantity, batchNumber);
+      const normalized = normalizeProduct(updated);
+      setProducts((prev) => prev.map((item) => (item.id === id || item.productId === id ? normalized : item)));
+    } catch (err) {
+      console.warn('Backend add stock error, updating locally:', err.message);
+      setProducts((prev) =>
+        prev.map((item) => {
+          if (item.id === id || item.productId === id) {
+            return {
+              ...item,
+              availableQuantity: Number(item.availableQuantity || 0) + Number(quantity)
+            };
+          }
+          return item;
+        })
+      );
+    }
+  };
+
+  const deductStock = async (id, quantity) => {
+    try {
+      const updated = await apiService.deductStock(id, quantity);
+      const normalized = normalizeProduct(updated);
+      setProducts((prev) => prev.map((item) => (item.id === id || item.productId === id ? normalized : item)));
+    } catch (err) {
+      console.warn('Backend deduct stock error, updating locally:', err.message);
+      setProducts((prev) =>
+        prev.map((item) => {
+          if (item.id === id || item.productId === id) {
+            return {
+              ...item,
+              availableQuantity: Math.max(0, Number(item.availableQuantity || 0) - Number(quantity))
+            };
+          }
+          return item;
+        })
+      );
+    }
+  };
+
+  // --- Order CRUD Operations ---
+  const createOrder = async (orderData) => {
+    const payload = {
+      customerId: orderData.customerId || 'CUST-001',
+      pricingStrategy: orderData.pricingStrategy || 'REGULAR',
+      notes: orderData.notes || '',
+      items: (orderData.items || []).map((item) => ({
+        productId: item.productId || item.id,
+        quantity: Number(item.quantity || 1)
+      }))
     };
-    setOrders((prev) => [newOrder, ...prev]);
-    return newOrder;
+
+    try {
+      const created = await apiService.createOrder(payload);
+      const normalized = normalizeOrder(created);
+      setOrders((prev) => [normalized, ...prev]);
+      // Refresh products state because backend automatically deducted stock
+      apiService.getProducts().then((prods) => setProducts(prods.map(normalizeProduct))).catch(() => {});
+      return normalized;
+    } catch (err) {
+      console.warn('Backend create order error, storing locally:', err.message);
+      const fallback = normalizeOrder({
+        ...orderData,
+        id: `ORD-${Math.floor(9000 + Math.random() * 1000)}`,
+        orderDate: new Date().toISOString().split('T')[0],
+        status: 'PENDING',
+        totalAmount: orderData.items ? orderData.items.reduce((sum, i) => sum + (i.subtotal || 0), 0) : 0
+      });
+      setOrders((prev) => [fallback, ...prev]);
+      return fallback;
+    }
   };
 
-  const updateOrderStatus = (id, newStatus) => {
-    setOrders((prev) =>
-      prev.map((order) => {
-        if (order.id === id) {
-          return { ...order, status: newStatus };
-        }
-        return order;
-      })
-    );
+  const updateOrderStatus = async (id, newStatus) => {
+    try {
+      const updated = await apiService.updateOrderStatus(id, newStatus);
+      const normalized = normalizeOrder(updated);
+      setOrders((prev) => prev.map((o) => (o.id === id ? normalized : o)));
+    } catch (err) {
+      console.warn('Backend update status error, updating locally:', err.message);
+      setOrders((prev) =>
+        prev.map((order) => (order.id === id ? { ...order, status: newStatus } : order))
+      );
+    }
   };
 
-  // Employee Operations
-  const addEmployee = (empData) => {
-    const newEmp = {
-      ...empData,
-      id: empData.id || `EMP-${Math.floor(200 + Math.random() * 800)}`,
-      hourlyRate: Number(empData.hourlyRate || 0),
-      status: empData.status || 'ACTIVE'
+  const cancelOrder = async (id) => {
+    try {
+      const cancelled = await apiService.cancelOrder(id);
+      const normalized = normalizeOrder(cancelled);
+      setOrders((prev) => prev.map((o) => (o.id === id ? normalized : o)));
+      // Refresh products state because backend automatically restored stock
+      apiService.getProducts().then((prods) => setProducts(prods.map(normalizeProduct))).catch(() => {});
+    } catch (err) {
+      console.warn('Backend cancel order error, updating locally:', err.message);
+      setOrders((prev) =>
+        prev.map((order) => (order.id === id ? { ...order, status: 'CANCELLED' } : order))
+      );
+    }
+  };
+
+  // --- Employee CRUD Operations ---
+  const addEmployee = async (empData) => {
+    const payload = {
+      name: empData.name,
+      email: empData.email,
+      phone: empData.phone,
+      department: empData.department || 'Warehouse Operations',
+      baseSalary: Number(empData.baseSalary || 0),
+      employeeType: empData.employeeType || 'WAREHOUSE_STAFF',
+      hireDate: empData.hireDate || new Date().toISOString().split('T')[0],
+      warehouseSection: empData.warehouseSection || null,
+      shiftType: empData.shiftType || null,
+      overtimeHours: empData.overtimeHours ? Number(empData.overtimeHours) : 0,
+      overtimeRate: empData.overtimeRate ? Number(empData.overtimeRate) : 0,
+      licenseNumber: empData.licenseNumber || null,
+      vehicleType: empData.vehicleType || null,
+      deliveryCount: empData.deliveryCount ? Number(empData.deliveryCount) : 0,
+      perDeliveryBonus: empData.perDeliveryBonus ? Number(empData.perDeliveryBonus) : 0,
+      managedDepartment: empData.managedDepartment || null,
+      teamSize: empData.teamSize ? Number(empData.teamSize) : 0,
+      managementBonus: empData.managementBonus ? Number(empData.managementBonus) : 0,
+      teamLeadBonusPerMember: empData.teamLeadBonusPerMember ? Number(empData.teamLeadBonusPerMember) : 0
     };
-    setEmployees((prev) => [newEmp, ...prev]);
+
+    try {
+      const created = await apiService.createEmployee(payload);
+      const normalized = normalizeEmployee(created);
+      setEmployees((prev) => [normalized, ...prev]);
+    } catch (err) {
+      console.warn('Backend add employee error, storing locally:', err.message);
+      const fallback = normalizeEmployee({
+        ...empData,
+        id: `EMP-${Math.floor(200 + Math.random() * 800)}`,
+        status: 'ACTIVE'
+      });
+      setEmployees((prev) => [fallback, ...prev]);
+    }
   };
 
-  const updateEmployee = (updatedEmp) => {
-    setEmployees((prev) =>
-      prev.map((emp) => (emp.id === updatedEmp.id ? updatedEmp : emp))
-    );
+  const updateEmployee = async (updatedEmp) => {
+    try {
+      const updated = await apiService.updateEmployee(updatedEmp.id, updatedEmp);
+      const normalized = normalizeEmployee(updated);
+      setEmployees((prev) => prev.map((emp) => (emp.id === updatedEmp.id ? normalized : emp)));
+    } catch (err) {
+      console.warn('Backend update employee error, updating locally:', err.message);
+      setEmployees((prev) =>
+        prev.map((emp) => (emp.id === updatedEmp.id ? normalizeEmployee(updatedEmp) : emp))
+      );
+    }
   };
 
-  const deleteEmployee = (id) => {
+  const deleteEmployee = async (id) => {
+    try {
+      await apiService.deleteEmployee(id);
+    } catch (err) {
+      console.warn('Backend delete employee error, removing locally:', err.message);
+    }
     setEmployees((prev) => prev.filter((emp) => emp.id !== id));
   };
 
-  // Attendance Operations
-  const addAttendanceRecord = (attData) => {
-    const newAtt = {
-      ...attData,
-      id: `ATT-${Math.floor(500 + Math.random() * 500)}`,
-      hoursWorked: Number(attData.hoursWorked || 0)
+  // --- Attendance Operations ---
+  const addAttendanceRecord = async (attData) => {
+    const payload = {
+      employeeId: attData.employeeId,
+      date: attData.date || new Date().toISOString().split('T')[0],
+      status: attData.status || 'PRESENT',
+      checkIn: attData.checkIn || '09:00:00',
+      checkOut: attData.checkOut || '17:00:00',
+      notes: attData.notes || ''
     };
-    setAttendance((prev) => [newAtt, ...prev]);
+
+    try {
+      const created = await apiService.recordAttendance(payload);
+      setAttendance((prev) => [created, ...prev]);
+    } catch (err) {
+      console.warn('Backend attendance error, storing locally:', err.message);
+      const fallback = {
+        ...attData,
+        id: `ATT-${Math.floor(500 + Math.random() * 500)}`,
+        hoursWorked: Number(attData.hoursWorked || 8)
+      };
+      setAttendance((prev) => [fallback, ...prev]);
+    }
   };
 
-  // Review Operations
-  const addReview = (revData) => {
-    const newRev = {
-      ...revData,
-      id: `REV-${Math.floor(300 + Math.random() * 700)}`,
+  // --- Review Operations ---
+  const addReview = async (revData) => {
+    const payload = {
+      productId: revData.productId,
+      customerId: revData.customerId || 'CUST-001',
       rating: Number(revData.rating || 5),
-      reviewDate: revData.reviewDate || new Date().toISOString().split('T')[0]
+      comment: revData.comment || ''
     };
-    setReviews((prev) => [newRev, ...prev]);
+
+    try {
+      const created = await apiService.createReview(payload);
+      setReviews((prev) => [created, ...prev]);
+    } catch (err) {
+      console.warn('Backend review error, storing locally:', err.message);
+      const fallback = {
+        ...revData,
+        id: `REV-${Math.floor(300 + Math.random() * 700)}`,
+        reviewDate: new Date().toISOString().split('T')[0]
+      };
+      setReviews((prev) => [fallback, ...prev]);
+    }
   };
 
-  // Exchange Operations
-  const addExchange = (excData) => {
-    const newExc = {
-      ...excData,
-      id: `EXC-${Math.floor(400 + Math.random() * 600)}`,
-      exchangeDate: excData.exchangeDate || new Date().toISOString().split('T')[0],
-      status: 'Pending Inspection'
+  // --- Exchange / Return Operations ---
+  const addExchange = async (excData) => {
+    const payload = {
+      orderId: excData.orderId,
+      customerId: excData.customerId || 'CUST-001',
+      productId: excData.productId,
+      quantity: Number(excData.quantity || 1),
+      returnReason: excData.reason || excData.returnReason || 'DEFECTIVE_ITEM',
+      condition: excData.condition || 'GOOD_UNOPENED',
+      notes: excData.notes || ''
     };
-    setExchanges((prev) => [newExc, ...prev]);
+
+    try {
+      const created = await apiService.createReturn(payload);
+      setExchanges((prev) => [created, ...prev]);
+    } catch (err) {
+      console.warn('Backend return request error, storing locally:', err.message);
+      const fallback = {
+        ...excData,
+        id: `EXC-${Math.floor(400 + Math.random() * 600)}`,
+        exchangeDate: new Date().toISOString().split('T')[0],
+        status: 'Pending Inspection'
+      };
+      setExchanges((prev) => [fallback, ...prev]);
+    }
   };
 
   // Aggregated Dashboard Metrics
-  const totalProductsCount = products.length;
-  const availableStockCount = products.reduce((acc, p) => acc + Number(p.availableQuantity), 0);
-  const pendingOrdersCount = orders.filter((o) => o.status === 'PENDING').length;
-  const monthlyRevenueTotal = 485200;
-  const activeEmployeesCount = employees.filter((e) => e.status === 'ACTIVE').length;
-  const lowStockItems = products.filter((p) => Number(p.availableQuantity) <= 10);
+  const safeProducts = Array.isArray(products) ? products : [];
+  const safeOrders = Array.isArray(orders) ? orders : [];
+  const safeEmployees = Array.isArray(employees) ? employees : [];
+
+  const totalProductsCount = safeProducts.length;
+  const availableStockCount = safeProducts.reduce((acc, p) => acc + Number(p?.availableQuantity || 0), 0);
+  const pendingOrdersCount = safeOrders.filter((o) => o?.status === 'PENDING').length;
+  const monthlyRevenueTotal = safeOrders.reduce((acc, o) => acc + (o?.status !== 'CANCELLED' ? Number(o?.totalAmount || 0) : 0), 0);
+  const activeEmployeesCount = safeEmployees.filter((e) => e?.active !== false && e?.status !== 'INACTIVE').length;
+  const lowStockItems = safeProducts.filter((p) => Number(p?.availableQuantity || 0) <= 10);
 
   return (
     <SLMSContext.Provider
@@ -164,13 +455,18 @@ export const SLMSProvider = ({ children }) => {
         user,
         login,
         logout,
+        isLiveConnected,
+        refreshAllData,
         products,
         addProduct,
         updateProduct,
         deleteProduct,
+        addStock,
+        deductStock,
         orders,
         createOrder,
         updateOrderStatus,
+        cancelOrder,
         employees,
         addEmployee,
         updateEmployee,
@@ -180,10 +476,9 @@ export const SLMSProvider = ({ children }) => {
         reviews,
         addReview,
         exchanges,
-        addExchange,
-        mockMonthlyRevenue,
-        mockPopularProducts,
-        mockSeasonalTrends,
+        mockMonthlyRevenue: mockMonthlyRevenue || [],
+        mockPopularProducts: mockPopularProducts || [],
+        mockSeasonalTrends: mockSeasonalTrends || [],
         totalProductsCount,
         availableStockCount,
         pendingOrdersCount,
@@ -204,3 +499,4 @@ export const useSLMS = () => {
   }
   return context;
 };
+

@@ -4,7 +4,7 @@ spring:
 
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017}
+      uri: ${MONGODB_URI:mongodb+srv://binarybrains2025_db_user:uPiSoJk3Cdz3uqCM@cluster0.1heupdn.mongodb.net/slms_db?retryWrites=true&w=majority&appName=Cluster0}
       database: ${MONGODB_DATABASE:slms_db}
 
   profiles:
