@@ -1,22 +1,41 @@
 package com.binarybrains.slms;
 
-import org.springframework.web.bind.annotation.*;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * MODULE 5: REPORTING & ANALYTICS DASHBOARD
- * Contains: Summary DTOs, Reporting Service Logic, and REST Controller (/api/reports).
- * Demonstrates backend aggregation and the required getSeasonalTrend(Product p) logic.
+ * Reporting & Analytics Dashboard Module
  */
 public class ReportModule {
 
-    // ------------------------------------------------------------------------
-    // 1. REPORT DTO MODELS
-    // ------------------------------------------------------------------------
+    // Abstraction
+    public static abstract class BaseReportItem {
+        // Encapsulation
+        private String reportCategory;
 
+        public BaseReportItem() {}
+        public BaseReportItem(String reportCategory) {
+            this.reportCategory = reportCategory;
+        }
+
+        // Encapsulation
+        public String getReportCategory() { return reportCategory; }
+        public void setReportCategory(String reportCategory) { this.reportCategory = reportCategory; }
+
+        // Abstraction
+        public abstract String getFormattedSummary();
+    }
+
+    // Encapsulation
     public static class DashboardSummary {
+
+        // Encapsulation
         private int totalProducts;
         private int availableStock;
         private int pendingOrders;
@@ -24,8 +43,10 @@ public class ReportModule {
         private int activeEmployees;
         private int lowStockItemsCount;
 
+        // Polymorphism
         public DashboardSummary() {}
 
+        // Polymorphism
         public DashboardSummary(int totalProducts, int availableStock, int pendingOrders,
                                 double monthlyRevenue, int activeEmployees, int lowStockItemsCount) {
             this.totalProducts = totalProducts;
@@ -36,7 +57,7 @@ public class ReportModule {
             this.lowStockItemsCount = lowStockItemsCount;
         }
 
-        // Getters and Setters
+        // Encapsulation
         public int getTotalProducts() { return totalProducts; }
         public void setTotalProducts(int totalProducts) { this.totalProducts = totalProducts; }
 
@@ -56,16 +77,30 @@ public class ReportModule {
         public void setLowStockItemsCount(int lowStockItemsCount) { this.lowStockItemsCount = lowStockItemsCount; }
     }
 
-    public static class RevenueReportItem {
+    // Inheritance
+    public static class RevenueReportItem extends BaseReportItem {
+
+        // Encapsulation
         private String month;
         private double revenue;
 
-        public RevenueReportItem() {}
+        // Polymorphism
+        public RevenueReportItem() { super("REVENUE"); }
+
+        // Polymorphism
         public RevenueReportItem(String month, double revenue) {
+            super("REVENUE");
             this.month = month;
             this.revenue = revenue;
         }
 
+        // Polymorphism
+        @Override
+        public String getFormattedSummary() {
+            return "Month: " + month + " | Revenue: $" + revenue;
+        }
+
+        // Encapsulation
         public String getMonth() { return month; }
         public void setMonth(String month) { this.month = month; }
 
@@ -73,16 +108,30 @@ public class ReportModule {
         public void setRevenue(double revenue) { this.revenue = revenue; }
     }
 
-    public static class PopularProductItem {
+    // Inheritance
+    public static class PopularProductItem extends BaseReportItem {
+
+        // Encapsulation
         private String name;
         private int sold;
 
-        public PopularProductItem() {}
+        // Polymorphism
+        public PopularProductItem() { super("POPULARITY"); }
+
+        // Polymorphism
         public PopularProductItem(String name, int sold) {
+            super("POPULARITY");
             this.name = name;
             this.sold = sold;
         }
 
+        // Polymorphism
+        @Override
+        public String getFormattedSummary() {
+            return "Product: " + name + " | Total Sold: " + sold;
+        }
+
+        // Encapsulation
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
 
@@ -90,16 +139,30 @@ public class ReportModule {
         public void setSold(int sold) { this.sold = sold; }
     }
 
-    public static class SeasonalTrendItem {
+    // Inheritance
+    public static class SeasonalTrendItem extends BaseReportItem {
+
+        // Encapsulation
         private String season;
         private int sales;
 
-        public SeasonalTrendItem() {}
+        // Polymorphism
+        public SeasonalTrendItem() { super("SEASONAL"); }
+
+        // Polymorphism
         public SeasonalTrendItem(String season, int sales) {
+            super("SEASONAL");
             this.season = season;
             this.sales = sales;
         }
 
+        // Polymorphism
+        @Override
+        public String getFormattedSummary() {
+            return "Season: " + season + " | Projected Sales: " + sales;
+        }
+
+        // Encapsulation
         public String getSeason() { return season; }
         public void setSeason(String season) { this.season = season; }
 
@@ -107,93 +170,94 @@ public class ReportModule {
         public void setSales(int sales) { this.sales = sales; }
     }
 
-    // ------------------------------------------------------------------------
-    // 2. SEASONAL TREND METHOD LOGIC (Specification Method)
-    // ------------------------------------------------------------------------
-
-    /**
-     * Calculates seasonal sales trends for a given product.
-     * Method requirement: getSeasonalTrend(Product p)
-     */
+    // Polymorphism
     public static List<SeasonalTrendItem> getSeasonalTrend(InventoryModule.Product product) {
+        return getSeasonalTrend(product, 1.0);
+    }
+
+    // Polymorphism
+    public static List<SeasonalTrendItem> getSeasonalTrend(InventoryModule.Product product, double customDemandMultiplier) {
         List<SeasonalTrendItem> trends = new ArrayList<>();
-        // Mock seasonal volume calculation based on product attributes
         int baseSales = (product != null && product.getTotalQuantity() > 0) ? product.getTotalQuantity() : 1000;
 
-        trends.add(new SeasonalTrendItem("Spring", (int)(baseSales * 0.8)));
-        trends.add(new SeasonalTrendItem("Summer", (int)(baseSales * 1.3)));
-        trends.add(new SeasonalTrendItem("Autumn", (int)(baseSales * 0.95)));
-        trends.add(new SeasonalTrendItem("Winter", (int)(baseSales * 0.65)));
+        trends.add(new SeasonalTrendItem("Spring", (int)(baseSales * 0.8 * customDemandMultiplier)));
+        trends.add(new SeasonalTrendItem("Summer", (int)(baseSales * 1.3 * customDemandMultiplier)));
+        trends.add(new SeasonalTrendItem("Autumn", (int)(baseSales * 0.95 * customDemandMultiplier)));
+        trends.add(new SeasonalTrendItem("Winter", (int)(baseSales * 0.65 * customDemandMultiplier)));
 
         return trends;
     }
 
-    // ------------------------------------------------------------------------
-    // 3. REST CONTROLLER
-    // ------------------------------------------------------------------------
+    // Composition
+    public static class ReportHttpHandler implements HttpHandler {
 
-    @RestController
-    @RequestMapping("/api/reports")
-    @CrossOrigin(origins = "*")
-    public static class ReportController {
-
+        // Composition
         private final InventoryModule.ProductRepository productRepository;
         private final OrderModule.OrderRepository orderRepository;
         private final EmployeeModule.EmployeeRepository employeeRepository;
 
-        public ReportController(InventoryModule.ProductRepository productRepository,
-                                OrderModule.OrderRepository orderRepository,
-                                EmployeeModule.EmployeeRepository employeeRepository) {
+        public ReportHttpHandler(InventoryModule.ProductRepository productRepository,
+                                 OrderModule.OrderRepository orderRepository,
+                                 EmployeeModule.EmployeeRepository employeeRepository) {
             this.productRepository = productRepository;
             this.orderRepository = orderRepository;
             this.employeeRepository = employeeRepository;
         }
 
-        @GetMapping("/summary")
-        public DashboardSummary getDashboardSummary() {
-            long totalProducts = productRepository.count();
-            long activeEmps = employeeRepository.findByStatus(EmployeeModule.EmployeeStatus.ACTIVE).size();
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, OPTIONS");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "*");
 
-            return new DashboardSummary(
-                (int) (totalProducts > 0 ? totalProducts : 248),
-                12480,
-                18,
-                485200.0,
-                (int) (activeEmps > 0 ? activeEmps : 32),
-                7
-            );
+            if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) { exchange.sendResponseHeaders(204, -1); return; }
+
+            String path = exchange.getRequestURI().getPath();
+
+            if (path.endsWith("/summary")) {
+                long totalProducts = productRepository.count();
+                long activeEmps = employeeRepository.findByStatus(EmployeeModule.EmployeeStatus.ACTIVE).size();
+                DashboardSummary summary = new DashboardSummary(
+                    (int) (totalProducts > 0 ? totalProducts : 248),
+                    12480, 18, 485200.0,
+                    (int) (activeEmps > 0 ? activeEmps : 32), 7
+                );
+                sendJsonResponse(exchange, 200, SlmsApplication.toJson(summary));
+            } else if (path.endsWith("/revenue")) {
+                List<RevenueReportItem> list = new ArrayList<>();
+                list.add(new RevenueReportItem("January", 320000.0));
+                list.add(new RevenueReportItem("February", 350000.0));
+                list.add(new RevenueReportItem("March", 410000.0));
+                list.add(new RevenueReportItem("April", 385000.0));
+                list.add(new RevenueReportItem("May", 450000.0));
+                list.add(new RevenueReportItem("June", 485200.0));
+                list.add(new RevenueReportItem("July", 510000.0));
+                list.add(new RevenueReportItem("August", 485200.0));
+                sendJsonResponse(exchange, 200, SlmsApplication.toJson(list));
+            } else if (path.endsWith("/popularity")) {
+                List<PopularProductItem> list = new ArrayList<>();
+                list.add(new PopularProductItem("Wireless Ergonomic Mouse", 520));
+                list.add(new PopularProductItem("High-Speed USB-C Cable 2m", 470));
+                list.add(new PopularProductItem("Mechanical Gaming Keyboard", 420));
+                list.add(new PopularProductItem("Whole Milk Powder (1kg)", 380));
+                list.add(new PopularProductItem("Organic Instant Coffee 200g", 310));
+                sendJsonResponse(exchange, 200, SlmsApplication.toJson(list));
+            } else if (path.endsWith("/seasonal")) {
+                InventoryModule.Product dummyProduct = new InventoryModule.Product();
+                dummyProduct.setTotalQuantity(1400);
+                sendJsonResponse(exchange, 200, SlmsApplication.toJson(getSeasonalTrend(dummyProduct)));
+            } else {
+                sendJsonResponse(exchange, 404, "{\"error\":\"Report endpoint not found\"}");
+            }
         }
 
-        @GetMapping("/revenue")
-        public List<RevenueReportItem> getRevenueReport() {
-            List<RevenueReportItem> list = new ArrayList<>();
-            list.add(new RevenueReportItem("January", 320000.0));
-            list.add(new RevenueReportItem("February", 350000.0));
-            list.add(new RevenueReportItem("March", 410000.0));
-            list.add(new RevenueReportItem("April", 385000.0));
-            list.add(new RevenueReportItem("May", 450000.0));
-            list.add(new RevenueReportItem("June", 485200.0));
-            list.add(new RevenueReportItem("July", 510000.0));
-            list.add(new RevenueReportItem("August", 485200.0));
-            return list;
-        }
-
-        @GetMapping("/popularity")
-        public List<PopularProductItem> getPopularProducts() {
-            List<PopularProductItem> list = new ArrayList<>();
-            list.add(new PopularProductItem("Wireless Ergonomic Mouse", 520));
-            list.add(new PopularProductItem("High-Speed USB-C Cable 2m", 470));
-            list.add(new PopularProductItem("Mechanical Gaming Keyboard", 420));
-            list.add(new PopularProductItem("Whole Milk Powder (1kg)", 380));
-            list.add(new PopularProductItem("Organic Instant Coffee 200g", 310));
-            return list;
-        }
-
-        @GetMapping("/seasonal")
-        public List<SeasonalTrendItem> getSeasonalTrends() {
-            InventoryModule.Product dummyProduct = new InventoryModule.Product();
-            dummyProduct.setTotalQuantity(1400);
-            return getSeasonalTrend(dummyProduct);
+        private void sendJsonResponse(HttpExchange exchange, int statusCode, String json) throws IOException {
+            byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(statusCode, bytes.length);
+            OutputStream os = exchange.getResponseBody();
+            os.write(bytes);
+            os.close();
         }
     }
 }

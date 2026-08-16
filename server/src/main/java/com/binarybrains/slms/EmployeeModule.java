@@ -1,52 +1,85 @@
 package com.binarybrains.slms;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * MODULE 3: EMPLOYEE, ATTENDANCE & PAYROLL MANAGEMENT
- * Contains: Employee, Attendance, Payroll Data Models, Repositories, and REST Controllers.
+ * Employee, Attendance & Payroll Module
  */
 public class EmployeeModule {
 
-    // ------------------------------------------------------------------------
-    // 1. ENUMS & DATA MODELS
-    // ------------------------------------------------------------------------
+    // Abstraction & Inheritance
+    public static abstract class BaseEntity {
+        // Encapsulation
+        private String id;
+
+        public BaseEntity() {}
+        public BaseEntity(String id) {
+            this.id = id;
+        }
+
+        // Encapsulation
+        public String getId() { return id; }
+        public void setId(String id) { this.id = id; }
+
+        // Abstraction
+        public abstract String getSummaryDetails();
+    }
 
     public enum EmployeeStatus {
         ACTIVE, INACTIVE
     }
 
-    @Document(collection = "employees")
-    public static class Employee {
-        @Id
-        private String id;
+    // Inheritance
+    public static class Employee extends BaseEntity {
+
+        // Encapsulation
         private String name;
         private String designation;
         private double hourlyRate;
         private EmployeeStatus status;
 
-        public Employee() {}
+        // Polymorphism
+        public Employee() { super(); }
 
+        // Polymorphism
         public Employee(String id, String name, String designation, double hourlyRate, EmployeeStatus status) {
-            this.id = id;
+            super(id);
             this.name = name;
             this.designation = designation;
-            this.hourlyRate = hourlyRate;
+            setHourlyRate(hourlyRate);
             this.status = status;
         }
 
-        // Getters and Setters
-        public String getId() { return id; }
-        public void setId(String id) { this.id = id; }
+        // Polymorphism
+        public Employee(String id, String name, String designation) {
+            this(id, name, designation, 25.0, EmployeeStatus.ACTIVE);
+        }
 
+        // Polymorphism
+        @Override
+        public String getSummaryDetails() {
+            return "Employee [" + getId() + "] " + name + " - " + designation + " (" + status + ")";
+        }
+
+        // Polymorphism
+        public double calculateEarnings(double hoursWorked) {
+            return hoursWorked * this.hourlyRate;
+        }
+
+        // Polymorphism
+        public double calculateEarnings(double hoursWorked, double bonusRate) {
+            return (hoursWorked * this.hourlyRate) * (1.0 + bonusRate);
+        }
+
+        // Encapsulation
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
 
@@ -54,16 +87,18 @@ public class EmployeeModule {
         public void setDesignation(String designation) { this.designation = designation; }
 
         public double getHourlyRate() { return hourlyRate; }
-        public void setHourlyRate(double hourlyRate) { this.hourlyRate = hourlyRate; }
+        public void setHourlyRate(double hourlyRate) {
+            this.hourlyRate = Math.max(0.0, hourlyRate);
+        }
 
         public EmployeeStatus getStatus() { return status; }
         public void setStatus(EmployeeStatus status) { this.status = status; }
     }
 
-    @Document(collection = "attendance")
-    public static class Attendance {
-        @Id
-        private String id;
+    // Inheritance
+    public static class Attendance extends BaseEntity {
+
+        // Encapsulation
         private String employeeId;
         private String employeeName;
         private String date;
@@ -71,23 +106,28 @@ public class EmployeeModule {
         private String checkOut;
         private double hoursWorked;
 
-        public Attendance() {}
+        // Polymorphism
+        public Attendance() { super(); }
 
+        // Polymorphism
         public Attendance(String id, String employeeId, String employeeName, String date,
                           String checkIn, String checkOut, double hoursWorked) {
-            this.id = id;
+            super(id);
             this.employeeId = employeeId;
             this.employeeName = employeeName;
             this.date = date;
             this.checkIn = checkIn;
             this.checkOut = checkOut;
-            this.hoursWorked = hoursWorked;
+            setHoursWorked(hoursWorked);
         }
 
-        // Getters and Setters
-        public String getId() { return id; }
-        public void setId(String id) { this.id = id; }
+        // Polymorphism
+        @Override
+        public String getSummaryDetails() {
+            return "Attendance Log [" + getId() + "] Employee: " + employeeName + " Date: " + date + " Hours: " + hoursWorked;
+        }
 
+        // Encapsulation
         public String getEmployeeId() { return employeeId; }
         public void setEmployeeId(String employeeId) { this.employeeId = employeeId; }
 
@@ -104,10 +144,15 @@ public class EmployeeModule {
         public void setCheckOut(String checkOut) { this.checkOut = checkOut; }
 
         public double getHoursWorked() { return hoursWorked; }
-        public void setHoursWorked(double hoursWorked) { this.hoursWorked = hoursWorked; }
+        public void setHoursWorked(double hoursWorked) {
+            this.hoursWorked = Math.max(0.0, hoursWorked);
+        }
     }
 
+    // Composition
     public static class PayrollSummary {
+
+        // Encapsulation
         private String employeeId;
         private String employeeName;
         private String designation;
@@ -124,10 +169,14 @@ public class EmployeeModule {
             this.designation = designation;
             this.totalHoursWorked = totalHoursWorked;
             this.hourlyRate = hourlyRate;
-            this.monthlySalary = totalHoursWorked * hourlyRate; // Monthly Salary = Hours Worked * Rate
+            recalculateMonthlySalary();
         }
 
-        // Getters and Setters
+        private void recalculateMonthlySalary() {
+            this.monthlySalary = this.totalHoursWorked * this.hourlyRate;
+        }
+
+        // Encapsulation
         public String getEmployeeId() { return employeeId; }
         public void setEmployeeId(String employeeId) { this.employeeId = employeeId; }
 
@@ -140,145 +189,224 @@ public class EmployeeModule {
         public double getTotalHoursWorked() { return totalHoursWorked; }
         public void setTotalHoursWorked(double totalHoursWorked) {
             this.totalHoursWorked = totalHoursWorked;
-            this.monthlySalary = this.totalHoursWorked * this.hourlyRate;
+            recalculateMonthlySalary();
         }
 
         public double getHourlyRate() { return hourlyRate; }
         public void setHourlyRate(double hourlyRate) {
             this.hourlyRate = hourlyRate;
-            this.monthlySalary = this.totalHoursWorked * this.hourlyRate;
+            recalculateMonthlySalary();
         }
 
         public double getMonthlySalary() { return monthlySalary; }
         public void setMonthlySalary(double monthlySalary) { this.monthlySalary = monthlySalary; }
     }
 
-    // ------------------------------------------------------------------------
-    // 2. MONGO REPOSITORIES
-    // ------------------------------------------------------------------------
-
-    public interface EmployeeRepository extends MongoRepository<Employee, String> {
+    // Abstraction
+    public interface EmployeeRepository {
+        List<Employee> findAll();
+        Optional<Employee> findById(String id);
         List<Employee> findByStatus(EmployeeStatus status);
+        Employee save(Employee employee);
+        boolean deleteById(String id);
+        boolean existsById(String id);
     }
 
-    public interface AttendanceRepository extends MongoRepository<Attendance, String> {
+    // Abstraction
+    public interface AttendanceRepository {
+        List<Attendance> findAll();
         List<Attendance> findByEmployeeId(String employeeId);
-        List<Attendance> findByDate(String date);
+        Attendance save(Attendance attendance);
     }
 
-    // ------------------------------------------------------------------------
-    // 3. REST CONTROLLERS
-    // ------------------------------------------------------------------------
+    // Inheritance
+    public static class InMemoryEmployeeRepository implements EmployeeRepository {
+        private final Map<String, Employee> store = new ConcurrentHashMap<>();
 
-    @RestController
-    @RequestMapping("/api/employees")
-    @CrossOrigin(origins = "*")
-    public static class EmployeeController {
+        public InMemoryEmployeeRepository() {
+            save(new Employee("EMP-201", "Rahim Ahmed", "Logistics Executive", 28.5, EmployeeStatus.ACTIVE));
+            save(new Employee("EMP-202", "Karim Uddin", "Warehouse Supervisor", 32.0, EmployeeStatus.ACTIVE));
+            save(new Employee("EMP-203", "Nusrat Jahan", "Inventory Analyst", 30.0, EmployeeStatus.ACTIVE));
+        }
 
+        @Override public List<Employee> findAll() { return new ArrayList<>(store.values()); }
+        @Override public Optional<Employee> findById(String id) { return Optional.ofNullable(store.get(id)); }
+        @Override public List<Employee> findByStatus(EmployeeStatus status) {
+            List<Employee> list = new ArrayList<>();
+            for (Employee e : store.values()) if (e.getStatus() == status) list.add(e);
+            return list;
+        }
+        @Override public Employee save(Employee employee) { store.put(employee.getId(), employee); return employee; }
+        @Override public boolean deleteById(String id) { return store.remove(id) != null; }
+        @Override public boolean existsById(String id) { return store.containsKey(id); }
+    }
+
+    // Inheritance
+    public static class InMemoryAttendanceRepository implements AttendanceRepository {
+        private final List<Attendance> list = Collections.synchronizedList(new ArrayList<>());
+
+        public InMemoryAttendanceRepository() {
+            list.add(new Attendance("ATT-501", "EMP-201", "Rahim Ahmed", "2026-08-15", "09:00", "17:00", 8.0));
+            list.add(new Attendance("ATT-502", "EMP-202", "Karim Uddin", "2026-08-15", "08:30", "16:30", 8.0));
+        }
+
+        @Override public List<Attendance> findAll() { return new ArrayList<>(list); }
+        @Override public List<Attendance> findByEmployeeId(String employeeId) {
+            List<Attendance> result = new ArrayList<>();
+            synchronized (list) {
+                for (Attendance a : list) if (Objects.equals(a.getEmployeeId(), employeeId)) result.add(a);
+            }
+            return result;
+        }
+        @Override public Attendance save(Attendance attendance) { list.add(attendance); return attendance; }
+    }
+
+    // Composition
+    public static class EmployeeHttpHandler implements HttpHandler {
         private final EmployeeRepository employeeRepository;
 
-        public EmployeeController(EmployeeRepository employeeRepository) {
+        public EmployeeHttpHandler(EmployeeRepository employeeRepository) {
             this.employeeRepository = employeeRepository;
         }
 
-        @GetMapping
-        public List<Employee> getAllEmployees() {
-            return employeeRepository.findAll();
-        }
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            setupCors(exchange);
+            if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) { exchange.sendResponseHeaders(204, -1); return; }
 
-        @GetMapping("/{id}")
-        public ResponseEntity<Employee> getEmployeeById(@PathVariable String id) {
-            Optional<Employee> emp = employeeRepository.findById(id);
-            return emp.map(ResponseEntity::ok)
-                      .orElseGet(() -> ResponseEntity.notFound().build());
-        }
+            String method = exchange.getRequestMethod();
+            String path = exchange.getRequestURI().getPath();
+            String[] parts = path.split("/");
+            String id = (parts.length > 3) ? parts[3] : null;
 
-        @PostMapping
-        public ResponseEntity<Employee> createEmployee(@RequestBody Employee employee) {
-            if (employee.getId() == null || employee.getId().isEmpty()) {
-                employee.setId("EMP-" + (int)(200 + Math.random() * 800));
+            try {
+                if ("GET".equalsIgnoreCase(method)) {
+                    if (id != null) {
+                        Optional<Employee> emp = employeeRepository.findById(id);
+                        if (emp.isPresent()) sendJsonResponse(exchange, 200, SlmsApplication.toJson(emp.get()));
+                        else sendJsonResponse(exchange, 404, "{\"error\":\"Employee not found\"}");
+                    } else {
+                        sendJsonResponse(exchange, 200, SlmsApplication.toJson(employeeRepository.findAll()));
+                    }
+                } else if ("POST".equalsIgnoreCase(method)) {
+                    String body = readBody(exchange);
+                    Map<String, String> map = SlmsApplication.parseJsonMap(body);
+                    Employee emp = new Employee();
+                    emp.setId(map.containsKey("id") && !map.get("id").isEmpty() ? map.get("id") : "EMP-" + (int)(200 + Math.random() * 800));
+                    emp.setName(map.getOrDefault("name", "New Employee"));
+                    emp.setDesignation(map.getOrDefault("designation", "Staff"));
+                    emp.setHourlyRate(map.containsKey("hourlyRate") ? Double.parseDouble(map.get("hourlyRate")) : 25.0);
+                    try { emp.setStatus(EmployeeStatus.valueOf(map.getOrDefault("status", "ACTIVE"))); } catch (Exception e) { emp.setStatus(EmployeeStatus.ACTIVE); }
+                    Employee saved = employeeRepository.save(emp);
+                    sendJsonResponse(exchange, 200, SlmsApplication.toJson(saved));
+                } else if ("PUT".equalsIgnoreCase(method)) {
+                    if (id == null || !employeeRepository.existsById(id)) {
+                        sendJsonResponse(exchange, 404, "{\"error\":\"Employee not found\"}");
+                        return;
+                    }
+                    String body = readBody(exchange);
+                    Map<String, String> map = SlmsApplication.parseJsonMap(body);
+                    Optional<Employee> existing = employeeRepository.findById(id);
+                    if (existing.isPresent()) {
+                        Employee emp = existing.get();
+                        if (map.containsKey("name")) emp.setName(map.get("name"));
+                        if (map.containsKey("designation")) emp.setDesignation(map.get("designation"));
+                        if (map.containsKey("hourlyRate")) emp.setHourlyRate(Double.parseDouble(map.get("hourlyRate")));
+                        employeeRepository.save(emp);
+                        sendJsonResponse(exchange, 200, SlmsApplication.toJson(emp));
+                    }
+                } else if ("DELETE".equalsIgnoreCase(method)) {
+                    if (id != null && employeeRepository.deleteById(id)) {
+                        exchange.sendResponseHeaders(204, -1);
+                    } else {
+                        sendJsonResponse(exchange, 404, "{\"error\":\"Employee not found\"}");
+                    }
+                }
+            } catch (Exception e) {
+                sendJsonResponse(exchange, 500, "{\"error\":\"" + e.getMessage() + "\"}");
             }
-            if (employee.getStatus() == null) {
-                employee.setStatus(EmployeeStatus.ACTIVE);
-            }
-            Employee saved = employeeRepository.save(employee);
-            return ResponseEntity.ok(saved);
-        }
-
-        @PutMapping("/{id}")
-        public ResponseEntity<Employee> updateEmployee(@PathVariable String id, @RequestBody Employee updated) {
-            if (!employeeRepository.existsById(id)) {
-                return ResponseEntity.notFound().build();
-            }
-            updated.setId(id);
-            Employee saved = employeeRepository.save(updated);
-            return ResponseEntity.ok(saved);
-        }
-
-        @DeleteMapping("/{id}")
-        public ResponseEntity<Void> deleteEmployee(@PathVariable String id) {
-            if (!employeeRepository.existsById(id)) {
-                return ResponseEntity.notFound().build();
-            }
-            employeeRepository.deleteById(id);
-            return ResponseEntity.noContent().build();
         }
     }
 
-    @RestController
-    @RequestMapping("/api/attendance")
-    @CrossOrigin(origins = "*")
-    public static class AttendanceController {
-
+    // Composition
+    public static class AttendanceHttpHandler implements HttpHandler {
         private final AttendanceRepository attendanceRepository;
 
-        public AttendanceController(AttendanceRepository attendanceRepository) {
+        public AttendanceHttpHandler(AttendanceRepository attendanceRepository) {
             this.attendanceRepository = attendanceRepository;
         }
 
-        @GetMapping
-        public List<Attendance> getAllAttendance() {
-            return attendanceRepository.findAll();
-        }
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            setupCors(exchange);
+            if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) { exchange.sendResponseHeaders(204, -1); return; }
 
-        @PostMapping
-        public ResponseEntity<Attendance> recordAttendance(@RequestBody Attendance attendance) {
-            if (attendance.getId() == null || attendance.getId().isEmpty()) {
-                attendance.setId("ATT-" + (int)(500 + Math.random() * 500));
+            String method = exchange.getRequestMethod();
+            if ("GET".equalsIgnoreCase(method)) {
+                sendJsonResponse(exchange, 200, SlmsApplication.toJson(attendanceRepository.findAll()));
+            } else if ("POST".equalsIgnoreCase(method)) {
+                String body = readBody(exchange);
+                Map<String, String> map = SlmsApplication.parseJsonMap(body);
+                Attendance att = new Attendance();
+                att.setId(map.containsKey("id") && !map.get("id").isEmpty() ? map.get("id") : "ATT-" + (int)(500 + Math.random() * 500));
+                att.setEmployeeId(map.getOrDefault("employeeId", "EMP-201"));
+                att.setEmployeeName(map.getOrDefault("employeeName", "Employee"));
+                att.setDate(map.getOrDefault("date", "2026-08-16"));
+                att.setCheckIn(map.getOrDefault("checkIn", "09:00"));
+                att.setCheckOut(map.getOrDefault("checkOut", "17:00"));
+                att.setHoursWorked(map.containsKey("hoursWorked") ? Double.parseDouble(map.get("hoursWorked")) : 8.0);
+                Attendance saved = attendanceRepository.save(att);
+                sendJsonResponse(exchange, 200, SlmsApplication.toJson(saved));
             }
-            Attendance saved = attendanceRepository.save(attendance);
-            return ResponseEntity.ok(saved);
         }
     }
 
-    @RestController
-    @RequestMapping("/api/payroll")
-    @CrossOrigin(origins = "*")
-    public static class PayrollController {
-
+    // Composition
+    public static class PayrollHttpHandler implements HttpHandler {
         private final EmployeeRepository employeeRepository;
         private final AttendanceRepository attendanceRepository;
 
-        public PayrollController(EmployeeRepository employeeRepository, AttendanceRepository attendanceRepository) {
+        public PayrollHttpHandler(EmployeeRepository employeeRepository, AttendanceRepository attendanceRepository) {
             this.employeeRepository = employeeRepository;
             this.attendanceRepository = attendanceRepository;
         }
 
-        @GetMapping
-        public List<PayrollSummary> getPayrollSummary() {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            setupCors(exchange);
+            if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) { exchange.sendResponseHeaders(204, -1); return; }
+
             List<Employee> employees = employeeRepository.findAll();
             List<PayrollSummary> payrollList = new ArrayList<>();
 
             for (Employee emp : employees) {
                 List<Attendance> logs = attendanceRepository.findByEmployeeId(emp.getId());
                 double recordedHours = logs.stream().mapToDouble(Attendance::getHoursWorked).sum();
-                // Standard monthly working hours benchmark (168 hrs) or logged sum
                 double totalHours = recordedHours > 0 ? recordedHours + 150 : 168.0;
-
                 payrollList.add(new PayrollSummary(emp.getId(), emp.getName(), emp.getDesignation(), totalHours, emp.getHourlyRate()));
             }
 
-            return payrollList;
+            sendJsonResponse(exchange, 200, SlmsApplication.toJson(payrollList));
         }
+    }
+
+    private static void setupCors(HttpExchange exchange) {
+        exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "*");
+    }
+
+    private static String readBody(HttpExchange exchange) throws IOException {
+        InputStream is = exchange.getRequestBody();
+        return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+    }
+
+    private static void sendJsonResponse(HttpExchange exchange, int statusCode, String json) throws IOException {
+        byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+        exchange.getResponseHeaders().add("Content-Type", "application/json");
+        exchange.sendResponseHeaders(statusCode, bytes.length);
+        OutputStream os = exchange.getResponseBody();
+        os.write(bytes);
+        os.close();
     }
 }
