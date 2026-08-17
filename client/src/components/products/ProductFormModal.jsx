@@ -43,7 +43,14 @@ const ProductFormModal = ({ isOpen, onClose, onSave, initialData }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const updated = { ...prev, [name]: value };
+      // When adding a new product, total quantity automatically sets available quantity
+      if (name === 'totalQuantity' && !initialData) {
+        updated.availableQuantity = value;
+      }
+      return updated;
+    });
   };
 
   const validate = () => {

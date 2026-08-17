@@ -239,8 +239,12 @@ public class InventoryModule {
                     prod.setBatchNumber(map.getOrDefault("batchNumber", "BATCH-01"));
                     prod.setProductionDate(map.getOrDefault("productionDate", LocalDate.now().toString()));
                     prod.setExpiryDate(map.getOrDefault("expiryDate", "N/A"));
-                    prod.setTotalQuantity(map.containsKey("totalQuantity") ? Integer.parseInt(map.get("totalQuantity")) : 100);
-                    prod.setAvailableQuantity(map.containsKey("availableQuantity") ? Integer.parseInt(map.get("availableQuantity")) : 100);
+                    int tot = map.containsKey("totalQuantity") ? Integer.parseInt(map.get("totalQuantity")) :
+                             (map.containsKey("quantity") ? Integer.parseInt(map.get("quantity")) : 100);
+                    int avail = map.containsKey("availableQuantity") ? Integer.parseInt(map.get("availableQuantity")) : tot;
+
+                    prod.setTotalQuantity(tot);
+                    prod.setAvailableQuantity(avail);
                     prod.setExpiredQuantity(map.containsKey("expiredQuantity") ? Integer.parseInt(map.get("expiredQuantity")) : 0);
                     prod.setCostPrice(map.containsKey("costPrice") ? Double.parseDouble(map.get("costPrice")) : 10.0);
                     prod.setSellingPrice(map.containsKey("sellingPrice") ? Double.parseDouble(map.get("sellingPrice")) : 20.0);

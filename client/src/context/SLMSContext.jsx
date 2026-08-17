@@ -159,35 +159,39 @@ export const SLMSProvider = ({ children }) => {
 
   // --- Product CRUD Operations ---
   const addProduct = async (newProduct) => {
+    const totQty = Number(newProduct.totalQuantity !== undefined ? newProduct.totalQuantity : newProduct.availableQuantity || 0);
+    const availQty = Number(newProduct.availableQuantity !== undefined ? newProduct.availableQuantity : totQty);
+
     const productPayload = {
+      id: newProduct.id,
       name: newProduct.name,
-      sku: newProduct.sku || `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
-      description: newProduct.description || '',
       category: newProduct.category || 'ELECTRONICS',
-      productType: newProduct.productType || 'NON_PERISHABLE',
+      type: newProduct.type || 'NonPerishableProduct',
       batchNumber: newProduct.batchNumber || `BAT-${Math.floor(100 + Math.random() * 900)}`,
-      quantity: Number(newProduct.availableQuantity || newProduct.totalQuantity || newProduct.quantity || 0),
+      productionDate: newProduct.productionDate || new Date().toISOString().split('T')[0],
+      expiryDate: newProduct.expiryDate || 'N/A',
+      totalQuantity: totQty,
+      availableQuantity: availQty,
+      expiredQuantity: Number(newProduct.expiredQuantity || 0),
       costPrice: Number(newProduct.costPrice || 0),
-      sellingPrice: Number(newProduct.sellingPrice || 0),
-      productionDate: newProduct.productionDate || null,
-      expiryDate: newProduct.expiryDate || null,
-      storageTemperatureCelsius: newProduct.storageTemperatureCelsius ? Number(newProduct.storageTemperatureCelsius) : null,
-      requiresRefrigeration: Boolean(newProduct.requiresRefrigeration),
-      warrantyMonths: newProduct.warrantyMonths ? Number(newProduct.warrantyMonths) : null,
-      weightKg: newProduct.weightKg ? Number(newProduct.weightKg) : null,
-      fragile: Boolean(newProduct.fragile)
+      sellingPrice: Number(newProduct.sellingPrice || 0)
     };
 
     try {
       const created = await apiService.createProduct(productPayload);
       const normalized = normalizeProduct(created);
-      setProducts((prev) => [normalized, ...prev]);
-      return normalized;
+      const finalProduct = {
+        ...normalized,
+        totalQuantity: normalized.totalQuantity !== undefined ? normalized.totalQuantity : productPayload.totalQuantity,
+        availableQuantity: normalized.availableQuantity !== undefined ? normalized.availableQuantity : productPayload.availableQuantity
+      };
+      setProducts((prev) => [finalProduct, ...prev]);
+      return finalProduct;
     } catch (err) {
       console.warn('Backend create product error, storing locally:', err.message);
       const fallback = normalizeProduct({
-        ...newProduct,
-        id: newProduct.id || `PRD-${Math.floor(1000 + Math.random() * 9000)}`
+        ...productPayload,
+        id: productPayload.id || `PRD-${Math.floor(1000 + Math.random() * 9000)}`
       });
       setProducts((prev) => [fallback, ...prev]);
       return fallback;
