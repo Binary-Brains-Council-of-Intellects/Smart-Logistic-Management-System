@@ -3,9 +3,11 @@ package com.binarybrains.slms;
 import com.sun.net.httpserver.HttpServer;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.Executors;
 
@@ -14,13 +16,16 @@ import java.util.concurrent.Executors;
  */
 public class SlmsApplication {
 
-    private static final int PORT = 8080;
+    private static final int DEFAULT_PORT = 8080;
 
     // Encapsulation
     public static void main(String[] args) {
         try {
+            String envPort = System.getenv("PORT");
+            int port = (envPort != null && !envPort.trim().isEmpty()) ? Integer.parseInt(envPort.trim()) : DEFAULT_PORT;
+
             // Abstraction
-            HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
+            HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
 
             // Composition
             InventoryModule.ProductRepository productRepository = new InventoryModule.InMemoryProductRepository();
@@ -29,6 +34,18 @@ public class SlmsApplication {
             OrderModule.OrderRepository orderRepository = new OrderModule.InMemoryOrderRepository();
             ReviewModule.ReviewRepository reviewRepository = new ReviewModule.InMemoryReviewRepository();
             ReviewModule.ReturnRepository returnRepository = new ReviewModule.InMemoryReturnRepository();
+
+            // Root / Health check handler for Render health checks
+            server.createContext("/", exchange -> {
+                String response = "{\"status\":\"UP\",\"message\":\"Smart Logistics Management System API is running\"}";
+                byte[] bytes = response.getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                exchange.sendResponseHeaders(200, bytes.length);
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(bytes);
+                }
+            });
 
             // Composition & Polymorphism
             server.createContext("/api/products", new InventoryModule.ProductHttpHandler(productRepository));
@@ -45,7 +62,7 @@ public class SlmsApplication {
 
             System.out.println("==================================================================");
             System.out.println("   Smart Logistics Management System (SLMS) - Pure Raw Java");
-            System.out.println("   HTTP Server started successfully on http://localhost:" + PORT);
+            System.out.println("   HTTP Server started successfully on port " + port);
             System.out.println("==================================================================");
 
             server.start();
