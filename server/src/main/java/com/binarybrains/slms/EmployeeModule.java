@@ -294,8 +294,12 @@ public class EmployeeModule {
                     Employee emp = new Employee();
                     emp.setId(map.containsKey("id") && !map.get("id").isEmpty() ? map.get("id") : "EMP-" + (int)(200 + Math.random() * 800));
                     emp.setName(map.getOrDefault("name", "New Employee"));
-                    emp.setDesignation(map.getOrDefault("designation", "Staff"));
-                    emp.setHourlyRate(map.containsKey("hourlyRate") ? Double.parseDouble(map.get("hourlyRate")) : 25.0);
+                    
+                    String desig = map.containsKey("designation") ? map.get("designation") : map.getOrDefault("department", "Warehouse Operator");
+                    double rate = map.containsKey("hourlyRate") ? Double.parseDouble(map.get("hourlyRate")) : (map.containsKey("baseSalary") ? Double.parseDouble(map.get("baseSalary")) : 200.0);
+                    
+                    emp.setDesignation(desig);
+                    emp.setHourlyRate(rate);
                     try { emp.setStatus(EmployeeStatus.valueOf(map.getOrDefault("status", "ACTIVE"))); } catch (Exception e) { emp.setStatus(EmployeeStatus.ACTIVE); }
                     Employee saved = employeeRepository.save(emp);
                     sendJsonResponse(exchange, 200, SlmsApplication.toJson(saved));

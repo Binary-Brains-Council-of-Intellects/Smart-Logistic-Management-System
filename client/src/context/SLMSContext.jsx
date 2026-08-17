@@ -41,8 +41,10 @@ function normalizeEmployee(e) {
   return {
     ...e,
     id: e.id,
-    baseSalary: Number(e.baseSalary || 0),
-    calculatedPayroll: Number(e.calculatedPayroll || e.baseSalary || 0)
+    name: e.name || 'Employee',
+    designation: e.designation || e.department || 'Warehouse Operator',
+    hourlyRate: Number(e.hourlyRate !== undefined ? e.hourlyRate : (e.baseSalary || 200)),
+    status: e.status || 'ACTIVE'
   };
 }
 
@@ -363,51 +365,56 @@ export const SLMSProvider = ({ children }) => {
   // --- Employee CRUD Operations ---
   const addEmployee = async (empData) => {
     const payload = {
+      id: empData.id,
       name: empData.name,
-      email: empData.email,
-      phone: empData.phone,
-      department: empData.department || 'Warehouse Operations',
-      baseSalary: Number(empData.baseSalary || 0),
-      employeeType: empData.employeeType || 'WAREHOUSE_STAFF',
-      hireDate: empData.hireDate || new Date().toISOString().split('T')[0],
-      warehouseSection: empData.warehouseSection || null,
-      shiftType: empData.shiftType || null,
-      overtimeHours: empData.overtimeHours ? Number(empData.overtimeHours) : 0,
-      overtimeRate: empData.overtimeRate ? Number(empData.overtimeRate) : 0,
-      licenseNumber: empData.licenseNumber || null,
-      vehicleType: empData.vehicleType || null,
-      deliveryCount: empData.deliveryCount ? Number(empData.deliveryCount) : 0,
-      perDeliveryBonus: empData.perDeliveryBonus ? Number(empData.perDeliveryBonus) : 0,
-      managedDepartment: empData.managedDepartment || null,
-      teamSize: empData.teamSize ? Number(empData.teamSize) : 0,
-      managementBonus: empData.managementBonus ? Number(empData.managementBonus) : 0,
-      teamLeadBonusPerMember: empData.teamLeadBonusPerMember ? Number(empData.teamLeadBonusPerMember) : 0
+      designation: empData.designation || 'Warehouse Operator',
+      hourlyRate: Number(empData.hourlyRate !== undefined ? empData.hourlyRate : 200),
+      status: empData.status || 'ACTIVE'
     };
 
     try {
       const created = await apiService.createEmployee(payload);
       const normalized = normalizeEmployee(created);
-      setEmployees((prev) => [normalized, ...prev]);
+      const finalEmp = {
+        ...normalized,
+        designation: normalized.designation && normalized.designation !== 'Staff' ? normalized.designation : payload.designation,
+        hourlyRate: normalized.hourlyRate || payload.hourlyRate
+      };
+      setEmployees((prev) => [finalEmp, ...prev]);
+      return finalEmp;
     } catch (err) {
       console.warn('Backend add employee error, storing locally:', err.message);
       const fallback = normalizeEmployee({
-        ...empData,
-        id: `EMP-${Math.floor(200 + Math.random() * 800)}`,
-        status: 'ACTIVE'
+        ...payload,
+        id: payload.id || `EMP-${Math.floor(200 + Math.random() * 800)}`
       });
       setEmployees((prev) => [fallback, ...prev]);
+      return fallback;
     }
   };
 
   const updateEmployee = async (updatedEmp) => {
+    const payload = {
+      id: updatedEmp.id,
+      name: updatedEmp.name,
+      designation: updatedEmp.designation,
+      hourlyRate: Number(updatedEmp.hourlyRate || 200),
+      status: updatedEmp.status || 'ACTIVE'
+    };
+
     try {
-      const updated = await apiService.updateEmployee(updatedEmp.id, updatedEmp);
+      const updated = await apiService.updateEmployee(updatedEmp.id, payload);
       const normalized = normalizeEmployee(updated);
-      setEmployees((prev) => prev.map((emp) => (emp.id === updatedEmp.id ? normalized : emp)));
+      const finalEmp = {
+        ...normalized,
+        designation: normalized.designation || payload.designation,
+        hourlyRate: normalized.hourlyRate || payload.hourlyRate
+      };
+      setEmployees((prev) => prev.map((emp) => (emp.id === updatedEmp.id ? finalEmp : emp)));
     } catch (err) {
       console.warn('Backend update employee error, updating locally:', err.message);
       setEmployees((prev) =>
-        prev.map((emp) => (emp.id === updatedEmp.id ? normalizeEmployee(updatedEmp) : emp))
+        prev.map((emp) => (emp.id === updatedEmp.id ? normalizeEmployee(payload) : emp))
       );
     }
   };
