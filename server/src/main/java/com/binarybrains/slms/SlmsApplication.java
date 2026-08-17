@@ -162,13 +162,66 @@ public class SlmsApplication {
         String content = json.trim();
         if (content.startsWith("{")) content = content.substring(1);
         if (content.endsWith("}")) content = content.substring(0, content.length() - 1);
+        content = content.trim();
+        if (content.isEmpty()) return map;
 
-        String[] pairs = content.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+        List<String> pairs = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+        int braceDepth = 0;
+        int bracketDepth = 0;
+
+        for (int i = 0; i < content.length(); i++) {
+            char c = content.charAt(i);
+            if (c == '"' && (i == 0 || content.charAt(i - 1) != '\\')) {
+                inQuotes = !inQuotes;
+            }
+            if (!inQuotes) {
+                if (c == '{') braceDepth++;
+                else if (c == '}') braceDepth--;
+                else if (c == '[') bracketDepth++;
+                else if (c == ']') bracketDepth--;
+
+                if (c == ',' && braceDepth == 0 && bracketDepth == 0) {
+                    pairs.add(current.toString());
+                    current.setLength(0);
+                    continue;
+                }
+            }
+            current.append(c);
+        }
+        if (current.length() > 0) {
+            pairs.add(current.toString());
+        }
+
         for (String pair : pairs) {
-            String[] kv = pair.split(":(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", 2);
-            if (kv.length == 2) {
-                String key = kv[0].trim().replaceAll("^\"|\"$", "");
-                String val = kv[1].trim().replaceAll("^\"|\"$", "");
+            int colonIndex = -1;
+            boolean pairInQuotes = false;
+            int pairBrace = 0;
+            int pairBracket = 0;
+            for (int i = 0; i < pair.length(); i++) {
+                char c = pair.charAt(i);
+                if (c == '"' && (i == 0 || pair.charAt(i - 1) != '\\')) {
+                    pairInQuotes = !pairInQuotes;
+                }
+                if (!pairInQuotes) {
+                    if (c == '{') pairBrace++;
+                    else if (c == '}') pairBrace--;
+                    else if (c == '[') pairBracket++;
+                    else if (c == ']') pairBracket--;
+                    if (c == ':' && pairBrace == 0 && pairBracket == 0) {
+                        colonIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            if (colonIndex != -1) {
+                String key = pair.substring(0, colonIndex).trim().replaceAll("^\"|\"$", "");
+                String val = pair.substring(colonIndex + 1).trim();
+                if (val.startsWith("\"") && val.endsWith("\"") && val.length() >= 2) {
+                    val = val.substring(1, val.length() - 1);
+                }
                 map.put(key, val);
             }
         }

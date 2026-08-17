@@ -15,10 +15,10 @@ const OrderFormModal = ({ isOpen, onClose, onSave }) => {
     if (isOpen) {
       setCustomerName('');
       setOrderDate(new Date().toISOString().split('T')[0]);
-      if (products.length > 0) {
+      if (products && products.length > 0) {
         setItems([
           {
-            productId: products[0].id,
+            productId: products[0].id || products[0].productId,
             productName: products[0].name,
             availableStock: products[0].availableQuantity,
             quantity: 1,
@@ -31,24 +31,26 @@ const OrderFormModal = ({ isOpen, onClose, onSave }) => {
       }
       setErrors({});
     }
-  }, [isOpen, products]);
+  }, [isOpen]);
 
-  const handleProductChange = (index, productId) => {
-    const selectedProd = products.find((p) => p.id === productId);
+  const handleProductChange = (index, prodId) => {
+    const selectedProd = products.find(
+      (p) => String(p.id || p.productId) === String(prodId)
+    );
     if (!selectedProd) return;
 
     setItems((prev) =>
       prev.map((item, i) => {
         if (i === index) {
-          const qty = item.quantity || 1;
-          const unitPrice = selectedProd.sellingPrice;
+          const qty = Number(item.quantity || 1);
+          const price = Number(selectedProd.sellingPrice || 0);
           return {
             ...item,
-            productId: selectedProd.id,
+            productId: selectedProd.id || selectedProd.productId,
             productName: selectedProd.name,
             availableStock: selectedProd.availableQuantity,
-            unitPrice,
-            subtotal: qty * unitPrice
+            unitPrice: price,
+            subtotal: qty * price
           };
         }
         return item;
@@ -57,14 +59,14 @@ const OrderFormModal = ({ isOpen, onClose, onSave }) => {
   };
 
   const handleQuantityChange = (index, qty) => {
-    const parsedQty = Math.max(1, Number(qty));
+    const parsedQty = Math.max(1, Number(qty || 1));
     setItems((prev) =>
       prev.map((item, i) => {
         if (i === index) {
           return {
             ...item,
             quantity: parsedQty,
-            subtotal: parsedQty * item.unitPrice
+            subtotal: parsedQty * Number(item.unitPrice || 0)
           };
         }
         return item;
@@ -73,17 +75,17 @@ const OrderFormModal = ({ isOpen, onClose, onSave }) => {
   };
 
   const handleAddItem = () => {
-    if (products.length === 0) return;
+    if (!products || products.length === 0) return;
     const firstProd = products[0];
     setItems((prev) => [
       ...prev,
       {
-        productId: firstProd.id,
+        productId: firstProd.id || firstProd.productId,
         productName: firstProd.name,
         availableStock: firstProd.availableQuantity,
         quantity: 1,
-        unitPrice: firstProd.sellingPrice,
-        subtotal: firstProd.sellingPrice
+        unitPrice: Number(firstProd.sellingPrice || 0),
+        subtotal: Number(firstProd.sellingPrice || 0)
       }
     ]);
   };
@@ -96,7 +98,6 @@ const OrderFormModal = ({ isOpen, onClose, onSave }) => {
 
   const validate = () => {
     const err = {};
-    if (!customerName.trim()) err.customerName = 'Customer name is required';
     if (items.length === 0) err.items = 'At least one item is required in the order';
     setErrors(err);
     return Object.keys(err).length === 0;
@@ -105,12 +106,35 @@ const OrderFormModal = ({ isOpen, onClose, onSave }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validate()) {
-      onSave({
-        customerName,
-        orderDate,
-        items,
-        totalAmount: orderTotal
+      const finalCustomerName = customerName.trim() || 'Walk-in Customer';
+      const normalizedItems = items.map((item) => {
+        const selectedProd = products.find(
+          (p) => String(p.id || p.productId) === String(item.productId)
+        );
+        const qty = Math.max(1, Number(item.quantity || 1));
+        const price = Number(item.unitPrice || selectedProd?.sellingPrice || 0);
+
+        return {
+          productId: item.productId || (selectedProd ? (selectedProd.id || selectedProd.productId) : 'PRD-1001'),
+          productName: selectedProd ? selectedProd.name : item.productName || 'Product Item',
+          quantity: qty,
+          unitPrice: price,
+          subtotal: qty * price
+        };
       });
+
+      const calculatedTotal = normalizedItems.reduce((sum, i) => sum + i.subtotal, 0);
+
+      onSave({
+        customerName: finalCustomerName,
+        orderDate: orderDate || new Date().toISOString().split('T')[0],
+        items: normalizedItems,
+        totalAmount: calculatedTotal
+      });
+
+      setCustomerName('');
+      setItems([]);
+      setErrors({});
       onClose();
     }
   };

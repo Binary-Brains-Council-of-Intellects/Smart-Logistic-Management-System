@@ -29,11 +29,29 @@ function normalizeProduct(p) {
 }
 
 function normalizeOrder(o) {
+  const rawItems = Array.isArray(o.items) ? o.items : [];
+  const items = rawItems.map((i) => ({
+    ...i,
+    productId: i.productId || i.id,
+    productName: i.productName || i.name || 'Product',
+    quantity: Number(i.quantity !== undefined ? i.quantity : 1),
+    unitPrice: Number(i.unitPrice !== undefined ? i.unitPrice : 0),
+    subtotal: Number(i.subtotal !== undefined ? i.subtotal : (Number(i.quantity || 1) * Number(i.unitPrice || 0)))
+  }));
+
+  const computedUnits = items.reduce((sum, i) => sum + i.quantity, 0);
+  const itemCount = o.itemCount !== undefined && Number(o.itemCount) > 0 
+    ? Number(o.itemCount) 
+    : (computedUnits > 0 ? computedUnits : (rawItems.length > 0 ? rawItems.length : 0));
+
   return {
     ...o,
     id: o.id,
+    customerName: o.customerName || 'Walk-in Customer',
     orderDate: o.orderDate ? String(o.orderDate) : new Date().toISOString().split('T')[0],
-    totalAmount: Number(o.totalAmount || 0)
+    itemCount,
+    items,
+    totalAmount: Number(o.totalAmount || (items.length > 0 ? items.reduce((sum, i) => sum + i.subtotal, 0) : 0))
   };
 }
 
@@ -270,18 +288,23 @@ export const SLMSProvider = ({ children }) => {
 
   // --- Order CRUD Operations ---
   const createOrder = async (orderData) => {
+    const rawItems = (orderData.items || []).map((item) => ({
+      productId: item.productId || item.id,
+      productName: item.productName || item.name || 'Product',
+      quantity: Number(item.quantity || 1),
+      unitPrice: Number(item.unitPrice || 0),
+      subtotal: Number(item.subtotal || (Number(item.quantity || 1) * Number(item.unitPrice || 0)))
+    }));
+
+    const computedUnits = rawItems.reduce((sum, i) => sum + i.quantity, 0);
+
     const payload = {
       customerName: orderData.customerName || 'Walk-in Customer',
       orderDate: orderData.orderDate || new Date().toISOString().split('T')[0],
       status: orderData.status || 'PENDING',
-      totalAmount: Number(orderData.totalAmount || (orderData.items ? orderData.items.reduce((sum, i) => sum + (i.subtotal || 0), 0) : 0)),
-      items: (orderData.items || []).map((item) => ({
-        productId: item.productId || item.id,
-        productName: item.productName || item.name || 'Product',
-        quantity: Number(item.quantity || 1),
-        unitPrice: Number(item.unitPrice || 0),
-        subtotal: Number(item.subtotal || (Number(item.quantity || 1) * Number(item.unitPrice || 0)))
-      }))
+      totalAmount: Number(orderData.totalAmount || (rawItems.length > 0 ? rawItems.reduce((sum, i) => sum + (i.subtotal || 0), 0) : 0)),
+      itemCount: computedUnits > 0 ? computedUnits : rawItems.length,
+      items: rawItems
     };
 
     try {
@@ -291,6 +314,7 @@ export const SLMSProvider = ({ children }) => {
       const finalOrder = {
         ...normalized,
         customerName: normalized.customerName && normalized.customerName !== 'Walk-in Customer' ? normalized.customerName : payload.customerName,
+        itemCount: normalized.itemCount && Number(normalized.itemCount) > 0 ? Number(normalized.itemCount) : payload.itemCount,
         items: Array.isArray(normalized.items) && normalized.items.length > 0 ? normalized.items : payload.items,
         totalAmount: normalized.totalAmount || payload.totalAmount
       };

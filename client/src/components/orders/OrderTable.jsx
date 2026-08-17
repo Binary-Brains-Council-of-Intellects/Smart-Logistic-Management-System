@@ -19,7 +19,9 @@ const OrderTable = ({ orders, onViewDetails, onUpdateStatus }) => {
         </thead>
         <tbody className="divide-y divide-slate-100 text-sm text-slate-800 font-medium">
           {orders.map((o) => {
-            const itemCount = o.items ? o.items.reduce((sum, item) => sum + Number(item.quantity || 1), 0) : 0;
+            const totalUnits = o.items ? o.items.reduce((sum, item) => sum + Number(item.quantity || 1), 0) : 0;
+            const totalLines = o.items ? o.items.length : 0;
+            const itemCount = totalUnits > 0 ? totalUnits : totalLines;
 
             return (
               <tr key={o.id} className="hover:bg-slate-50/80 transition-colors">
@@ -27,8 +29,8 @@ const OrderTable = ({ orders, onViewDetails, onUpdateStatus }) => {
                 <td className="px-4 py-3.5 font-bold text-slate-900">{o.customerName}</td>
                 <td className="px-4 py-3.5 text-xs text-slate-500">{o.orderDate}</td>
                 <td className="px-4 py-3.5">
-                  <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-semibold">
-                    {itemCount} units ({o.items ? o.items.length : 0} lines)
+                  <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200/80 inline-flex items-center gap-1">
+                    {itemCount} {itemCount === 1 ? 'Item' : 'Items'}
                   </span>
                 </td>
                 <td className="px-4 py-3.5 font-extrabold text-slate-900">৳{o.totalAmount.toLocaleString()}</td>

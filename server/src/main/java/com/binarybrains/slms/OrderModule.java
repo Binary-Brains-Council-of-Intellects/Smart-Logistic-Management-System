@@ -89,6 +89,7 @@ public class OrderModule {
 
         // Composition
         private List<OrderItem> items = new ArrayList<>();
+        private int itemCount;
         private double totalAmount;
 
         // Polymorphism
@@ -123,8 +124,12 @@ public class OrderModule {
                 this.totalAmount = this.items.stream()
                         .mapToDouble(OrderItem::getSubtotal)
                         .sum();
+                this.itemCount = this.items.stream()
+                        .mapToInt(OrderItem::getQuantity)
+                        .sum();
             } else {
                 this.totalAmount = 0.0;
+                this.itemCount = 0;
             }
         }
 
@@ -160,6 +165,9 @@ public class OrderModule {
             this.items = items;
             recalculateTotal();
         }
+
+        public int getItemCount() { return itemCount; }
+        public void setItemCount(int itemCount) { this.itemCount = itemCount; }
 
         public double getTotalAmount() { return totalAmount; }
         public void setTotalAmount(double totalAmount) { this.totalAmount = totalAmount; }
@@ -259,6 +267,9 @@ public class OrderModule {
                     }
 
                     order.recalculateTotal();
+                    if (map.containsKey("itemCount")) {
+                        try { order.setItemCount(Integer.parseInt(map.get("itemCount"))); } catch (Exception ignored) {}
+                    }
                     if (map.containsKey("totalAmount") && order.getTotalAmount() == 0.0) {
                         try { order.setTotalAmount(Double.parseDouble(map.get("totalAmount"))); } catch (Exception ignored) {}
                     }

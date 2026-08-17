@@ -2,11 +2,54 @@ import React from 'react';
 import Modal from '../common/Modal';
 import StatusBadge from '../common/StatusBadge';
 import { XCircle } from 'lucide-react';
+import { useSLMS } from '../../context/SLMSContext';
 
 const OrderDetailsModal = ({ isOpen, onClose, order }) => {
+  const { products } = useSLMS();
+
   if (!order) return null;
 
-  const totalItemsCount = order.items ? order.items.reduce((acc, item) => acc + Number(item.quantity || 1), 0) : 0;
+  const rawItems = Array.isArray(order.items) ? order.items : [];
+  
+  const displayItems = rawItems.map((item) => {
+    const matchedProd = products.find(
+      (p) => String(p.id || p.productId) === String(item.productId || item.id)
+    );
+
+    const productName = item.productName && item.productName !== 'Product' && item.productName !== 'Product Item'
+      ? item.productName
+      : (matchedProd ? matchedProd.name : (item.name || 'Product Item'));
+
+    const quantity = Math.max(1, Number(item.quantity || 1));
+
+    const unitPrice = Number(
+      item.unitPrice !== undefined && item.unitPrice > 0
+        ? item.unitPrice
+        : (matchedProd ? matchedProd.sellingPrice : (item.price || 0))
+    );
+
+    const subtotal = Number(
+      item.subtotal !== undefined && item.subtotal > 0
+        ? item.subtotal
+        : (quantity * unitPrice)
+    );
+
+    return {
+      ...item,
+      productName,
+      quantity,
+      unitPrice,
+      subtotal
+    };
+  });
+
+  const calculatedGrandTotal = displayItems.length > 0
+    ? displayItems.reduce((acc, item) => acc + item.subtotal, 0)
+    : Number(order.totalAmount || 0);
+
+  const totalItemsCount = displayItems.length > 0
+    ? displayItems.reduce((acc, item) => acc + item.quantity, 0)
+    : Number(order.itemCount || 0);
 
   const steps = [
     { key: 'PENDING', label: 'Pending' },
@@ -34,12 +77,12 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
               </span>
               <StatusBadge status={order.status} />
             </div>
-            <h4 className="text-lg font-bold text-slate-900">{order.customerName}</h4>
+            <h4 className="text-lg font-bold text-slate-900">{order.customerName || 'Walk-in Customer'}</h4>
             <p className="text-xs text-slate-500">Order Placed Date: {order.orderDate}</p>
           </div>
           <div className="sm:text-right">
             <span className="text-xs text-slate-400 font-semibold uppercase block">Grand Total</span>
-            <span className="text-2xl font-extrabold text-slate-900">৳{order.totalAmount.toLocaleString()}</span>
+            <span className="text-2xl font-extrabold text-slate-900">৳{calculatedGrandTotal.toLocaleString()}</span>
           </div>
         </div>
 
@@ -95,22 +138,27 @@ const OrderDetailsModal = ({ isOpen, onClose, order }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-medium">
-                {order.items &&
-                  order.items.map((item, idx) => (
+                {displayItems.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" className="py-4 text-center text-slate-500">No item details available for this order.</td>
+                  </tr>
+                ) : (
+                  displayItems.map((item, idx) => (
                     <tr key={idx}>
                       <td className="py-2.5 px-3 font-bold text-slate-900">{item.productName}</td>
-                      <td className="py-2.5 px-3">{item.quantity} units</td>
+                      <td className="py-2.5 px-3 font-semibold text-slate-700">{item.quantity} units</td>
                       <td className="py-2.5 px-3 text-slate-600">৳{item.unitPrice.toLocaleString()}</td>
                       <td className="py-2.5 px-3 text-right font-extrabold text-slate-900">৳{item.subtotal.toLocaleString()}</td>
                     </tr>
-                  ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>
         </div>
 
         <div className="flex justify-between items-center text-xs pt-2 border-t border-slate-200 font-semibold text-slate-600">
-          <span>Total Units Ordered: {totalItemsCount}</span>
+          <span>Total Items Ordered: {totalItemsCount} {totalItemsCount === 1 ? 'Item' : 'Items'}</span>
           <button onClick={onClose} className="btn btn-sm btn-outline border-slate-300 text-slate-700 rounded-xl">
             Close View
           </button>
