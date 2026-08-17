@@ -10,12 +10,14 @@ import {
   Settings,
   LogOut,
   Warehouse,
+  Sun,
+  Moon,
   X
 } from 'lucide-react';
 import { useSLMS } from '../../context/SLMSContext';
 
 const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
-  const { logout } = useSLMS();
+  const { logout, theme, toggleTheme } = useSLMS();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -83,6 +85,25 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
 
       {/* Bottom Footer Actions */}
       <div className="p-3 border-t border-slate-800 space-y-1">
+        {/* Day Mode / Night Mode Toggle */}
+        <button
+          onClick={toggleTheme}
+          className="flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-all cursor-pointer"
+          title={`Switch to ${theme === 'dark' ? 'Day Mode' : 'Night Mode'}`}
+        >
+          <div className="flex items-center gap-3">
+            {theme === 'dark' ? (
+              <Sun className="w-5 h-5 text-amber-400" />
+            ) : (
+              <Moon className="w-5 h-5 text-sky-400" />
+            )}
+            <span>{theme === 'dark' ? 'Day Mode' : 'Night Mode'}</span>
+          </div>
+          <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700">
+            {theme === 'dark' ? 'Night' : 'Day'}
+          </span>
+        </button>
+
         <button
           onClick={() => alert('System settings configured via application properties.')}
           className="flex items-center gap-3 w-full px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors"

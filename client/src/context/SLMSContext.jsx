@@ -61,6 +61,25 @@ export const SLMSProvider = ({ children }) => {
   const [exchanges, setExchanges] = useState(initialExchanges || []);
   const [isLiveConnected, setIsLiveConnected] = useState(false);
 
+  // Theme Management (Day Mode / Night Mode)
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('slms-theme') || 'light';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('slms-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  };
+
   // Fetch initial data from Spring Boot backend if available
   const refreshAllData = async () => {
     try {
@@ -491,6 +510,8 @@ export const SLMSProvider = ({ children }) => {
         user,
         login,
         logout,
+        theme,
+        toggleTheme,
         isLiveConnected,
         refreshAllData,
         products,
