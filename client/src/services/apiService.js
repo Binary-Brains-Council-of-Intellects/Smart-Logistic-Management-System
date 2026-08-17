@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const API_BASE_URL = 'https://slms-backend-1u96.onrender.com/api';
 
 /**
  * Helper to perform HTTP fetch requests to the Spring Boot REST backend

@@ -54,12 +54,12 @@ const Navbar = ({ onOpenMobileMenu }) => {
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-500 rounded-full ring-2 ring-white" />
         </button>
 
-        {/* Live Spring Boot Server Connection Badge */}
+        {/* Live Java REST Server Connection Badge */}
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all"
-             title={isLiveConnected ? "Connected to Spring Boot REST Backend (Port 8080)" : "Server not detected, using fallback mode"}>
+             title={isLiveConnected ? "Connected to Render Java REST Backend (https://slms-backend-1u96.onrender.com)" : "Connecting to Render Backend..."}>
           <span className={`w-2 h-2 rounded-full ${isLiveConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
           <span className={isLiveConnected ? 'text-emerald-700 font-medium text-[11px]' : 'text-slate-500 font-medium text-[11px]'}>
-            {isLiveConnected ? 'Database Connected' : 'Offline Mode'}
+            {isLiveConnected ? 'Render Backend Connected' : 'Connecting...'}
           </span>
         </div>
 
