@@ -59,7 +59,7 @@ const Navbar = ({ onOpenMobileMenu }) => {
              title={isLiveConnected ? "Connected to Spring Boot REST Backend (Port 8080)" : "Server not detected, using fallback mode"}>
           <span className={`w-2 h-2 rounded-full ${isLiveConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
           <span className={isLiveConnected ? 'text-emerald-700 font-medium text-[11px]' : 'text-slate-500 font-medium text-[11px]'}>
-            {isLiveConnected ? 'Spring Boot Connected' : 'Offline Mode'}
+            {isLiveConnected ? 'Database Connected' : 'Offline Mode'}
           </span>
         </div>
 
