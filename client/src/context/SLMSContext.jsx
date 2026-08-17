@@ -533,7 +533,7 @@ export const SLMSProvider = ({ children }) => {
   const pendingOrdersCount = safeOrders.filter((o) => o?.status === 'PENDING').length;
   const monthlyRevenueTotal = safeOrders.reduce((acc, o) => acc + (o?.status !== 'CANCELLED' ? Number(o?.totalAmount || 0) : 0), 0);
   const activeEmployeesCount = safeEmployees.filter((e) => e?.active !== false && e?.status !== 'INACTIVE').length;
-  const lowStockItems = safeProducts.filter((p) => Number(p?.availableQuantity || 0) <= 10);
+  const lowStockItems = safeProducts.filter((p) => Number(p?.availableQuantity || 0) < 100);
 
   return (
     <SLMSContext.Provider
