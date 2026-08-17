@@ -136,12 +136,12 @@ export const SLMSProvider = ({ children }) => {
     refreshAllData();
   }, []);
 
-  // Authentication Mock
+  // Authentication Mock (Restricted to admin / 12345)
   const login = (username, password) => {
-    if (username && password) {
+    if (username === 'admin' && password === '12345') {
       setUser({
         isAuthenticated: true,
-        username: username || 'Admin User',
+        username: 'admin',
         role: 'Warehouse Operations Manager'
       });
       return true;

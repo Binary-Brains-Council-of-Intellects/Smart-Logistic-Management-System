@@ -5,7 +5,7 @@ import { useSLMS } from '../context/SLMSContext';
 
 const Login = () => {
   const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('password123');
+  const [password, setPassword] = useState('12345');
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
 
@@ -19,8 +19,13 @@ const Login = () => {
       return;
     }
 
-    login(username, password);
-    navigate('/dashboard');
+    const success = login(username.trim(), password.trim());
+    if (success) {
+      setError('');
+      navigate('/dashboard');
+    } else {
+      setError('Invalid credentials! Only username "admin" and password "12345" are allowed.');
+    }
   };
 
   return (
@@ -91,7 +96,7 @@ const Login = () => {
             </label>
             <button
               type="button"
-              onClick={() => alert('Demo account credentials: admin / password123')}
+              onClick={() => alert('Demo account credentials: admin / 12345')}
               className="text-blue-600 hover:underline font-semibold"
             >
               Demo credentials?
