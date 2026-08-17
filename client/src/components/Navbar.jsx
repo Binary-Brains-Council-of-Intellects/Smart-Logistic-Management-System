@@ -174,53 +174,6 @@ const Navbar = () => {
 
                         {/* Right Action Utilities */}
                         <div className="hidden md:flex items-center gap-3">
-                            {/* Quick Search Toggle / Input */}
-                            <div className="relative">
-                                <button
-                                    onClick={() => setShowQuickTrack(!showQuickTrack)}
-                                    className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200/80 rounded-xl transition-colors border border-slate-200"
-                                    title="Quick Track Shipment"
-                                >
-                                    <Search className="w-4 h-4 text-blue-600" />
-                                    <span>Quick Track</span>
-                                </button>
-
-                                {/* Popover Track Search */}
-                                {showQuickTrack && (
-                                    <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 z-50">
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                                                <Package className="w-4 h-4 text-blue-600" /> Track Shipment
-                                            </span>
-                                            <button
-                                                onClick={() => setShowQuickTrack(false)}
-                                                className="text-slate-400 hover:text-slate-600 p-1"
-                                            >
-                                                <X className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                        <form onSubmit={handleTrackSubmit} className="space-y-2">
-                                            <div className="relative">
-                                                <input
-                                                    type="text"
-                                                    placeholder="Enter Waybill / Tracking ID..."
-                                                    value={trackingId}
-                                                    onChange={(e) => setTrackingId(e.target.value)}
-                                                    className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800 placeholder-slate-400"
-                                                    autoFocus
-                                                />
-                                            </div>
-                                            <button
-                                                type="submit"
-                                                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5"
-                                            >
-                                                <span>Search Status</span>
-                                                <ArrowRight className="w-4 h-4" />
-                                            </button>
-                                        </form>
-                                    </div>
-                                )}
-                            </div>
 
                             {/* Login Button */}
                             <Link

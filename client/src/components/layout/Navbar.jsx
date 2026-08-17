@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import { Menu, Search, Bell, UserCheck } from 'lucide-react';
+import { Menu, Bell, UserCheck } from 'lucide-react';
 import { useSLMS } from '../../context/SLMSContext';
 
 const Navbar = ({ onOpenMobileMenu }) => {
@@ -36,15 +36,6 @@ const Navbar = ({ onOpenMobileMenu }) => {
       </div>
 
       <div className="flex items-center gap-3 sm:gap-4">
-        <div className="relative hidden md:block">
-          <input
-            type="text"
-            placeholder="Search warehouse logs..."
-            className="w-56 lg:w-64 pl-9 pr-4 py-2 text-xs bg-slate-100 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-800"
-          />
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-        </div>
-
         <button
           onClick={() => alert('System Notifications: 2 near-expiry batch alerts pending.')}
           className="relative p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
