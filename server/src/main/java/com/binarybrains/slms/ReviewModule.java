@@ -250,7 +250,7 @@ public class ReviewModule {
                 req.setProductName(map.getOrDefault("productName", "Product"));
                 req.setCustomerName(map.getOrDefault("customerName", "Customer"));
                 try { req.setReason(ExchangeReason.valueOf(map.getOrDefault("reason", "OTHER"))); } catch (Exception e) { req.setReason(ExchangeReason.OTHER); }
-                req.setExchangeDate(map.getOrDefault("exchangeDate", "2026-08-16"));
+                req.setExchangeDate(map.containsKey("exchangeDate") ? map.get("exchangeDate") : java.time.LocalDate.now().toString());
                 req.setStatus(map.getOrDefault("status", "Pending Inspection"));
                 req.setNotes(map.getOrDefault("notes", ""));
                 ReturnRequest saved = returnRepository.save(req);

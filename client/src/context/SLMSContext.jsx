@@ -487,27 +487,39 @@ export const SLMSProvider = ({ children }) => {
   // --- Exchange / Return Operations ---
   const addExchange = async (excData) => {
     const payload = {
-      orderId: excData.orderId,
-      customerId: excData.customerId || 'CUST-001',
+      id: excData.id,
+      orderId: excData.orderId || `ORD-${Math.floor(9000 + Math.random() * 1000)}`,
       productId: excData.productId,
-      quantity: Number(excData.quantity || 1),
-      returnReason: excData.reason || excData.returnReason || 'DEFECTIVE_ITEM',
-      condition: excData.condition || 'GOOD_UNOPENED',
+      productName: excData.productName || 'Product',
+      customerName: excData.customerName || 'Customer',
+      reason: excData.reason || excData.returnReason || 'DAMAGED',
+      exchangeDate: excData.exchangeDate || new Date().toISOString().split('T')[0],
+      status: excData.status || 'Pending Inspection',
       notes: excData.notes || ''
     };
 
     try {
       const created = await apiService.createReturn(payload);
-      setExchanges((prev) => [created, ...prev]);
+      const finalExc = {
+        ...created,
+        orderId: created.orderId || payload.orderId,
+        productName: created.productName && created.productName !== 'Product' ? created.productName : payload.productName,
+        customerName: created.customerName && created.customerName !== 'Customer' ? created.customerName : payload.customerName,
+        reason: created.reason || payload.reason,
+        exchangeDate: created.exchangeDate || payload.exchangeDate,
+        status: created.status || payload.status,
+        notes: created.notes || payload.notes
+      };
+      setExchanges((prev) => [finalExc, ...prev]);
+      return finalExc;
     } catch (err) {
       console.warn('Backend return request error, storing locally:', err.message);
       const fallback = {
-        ...excData,
-        id: `EXC-${Math.floor(400 + Math.random() * 600)}`,
-        exchangeDate: new Date().toISOString().split('T')[0],
-        status: 'Pending Inspection'
+        ...payload,
+        id: payload.id || `EXC-${Math.floor(400 + Math.random() * 600)}`
       };
       setExchanges((prev) => [fallback, ...prev]);
+      return fallback;
     }
   };
 

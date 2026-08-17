@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../common/Modal';
 import { useSLMS } from '../../context/SLMSContext';
 
@@ -13,9 +13,14 @@ const ExchangeFormModal = ({ isOpen, onClose, onSave }) => {
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState({});
 
+  useEffect(() => {
+    if (products && products.length > 0 && !productId) {
+      setProductId(products[0].id || products[0].productId || '');
+    }
+  }, [products, productId]);
+
   const validate = () => {
     const err = {};
-    if (!orderId.trim()) err.orderId = 'Order ID is required';
     if (!customerName.trim()) err.customerName = 'Customer name is required';
     setErrors(err);
     return Object.keys(err).length === 0;
@@ -24,18 +29,25 @@ const ExchangeFormModal = ({ isOpen, onClose, onSave }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validate()) {
-      const selectedProd = products.find((p) => p.id === productId);
+      const activeProdId = productId || (products[0]?.id || products[0]?.productId || '');
+      const selectedProd = products.find(
+        (p) => String(p.id || p.productId) === String(activeProdId)
+      );
+
       onSave({
-        orderId,
-        productId,
-        productName: selectedProd ? selectedProd.name : 'Product',
-        customerName,
-        reason,
-        exchangeDate,
-        notes
+        orderId: orderId.trim() || `ORD-${Math.floor(9000 + Math.random() * 1000)}`,
+        productId: activeProdId,
+        productName: selectedProd ? selectedProd.name : 'Product Item',
+        customerName: customerName.trim(),
+        reason: reason || 'DAMAGED',
+        exchangeDate: exchangeDate || new Date().toISOString().split('T')[0],
+        status: 'Pending Inspection',
+        notes: notes.trim()
       });
+
       setCustomerName('');
       setNotes('');
+      setErrors({});
       onClose();
     }
   };
@@ -50,9 +62,8 @@ const ExchangeFormModal = ({ isOpen, onClose, onSave }) => {
             placeholder="e.g. ORD-9001"
             value={orderId}
             onChange={(e) => setOrderId(e.target.value)}
-            className={`input input-sm border-slate-200 w-full font-mono text-xs ${errors.orderId ? 'input-error' : ''}`}
+            className="input input-sm border-slate-200 w-full font-mono text-xs"
           />
-          {errors.orderId && <span className="text-[10px] text-rose-600 font-semibold">{errors.orderId}</span>}
         </div>
 
         <div>
@@ -63,8 +74,8 @@ const ExchangeFormModal = ({ isOpen, onClose, onSave }) => {
             className="select select-sm border-slate-200 w-full text-xs"
           >
             {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} ({p.id})
+              <option key={p.id || p.productId} value={p.id || p.productId}>
+                {p.name} ({p.id || p.productId})
               </option>
             ))}
           </select>
