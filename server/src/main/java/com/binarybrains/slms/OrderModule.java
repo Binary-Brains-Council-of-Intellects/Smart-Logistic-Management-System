@@ -232,10 +232,37 @@ public class OrderModule {
                     Map<String, String> map = SlmsApplication.parseJsonMap(body);
                     Order order = new Order();
                     order.setId(map.containsKey("id") && !map.get("id").isEmpty() ? map.get("id") : "ORD-" + (int)(9000 + Math.random() * 1000));
-                    order.setCustomerName(map.getOrDefault("customerName", "Walk-in Customer"));
-                    order.setOrderDate(map.getOrDefault("orderDate", "2026-08-16"));
+                    
+                    String custName = map.get("customerName");
+                    if (custName == null || custName.trim().isEmpty()) {
+                        custName = map.getOrDefault("customer", "Walk-in Customer");
+                    }
+                    order.setCustomerName(custName);
+
+                    String dateStr = map.get("orderDate");
+                    if (dateStr == null || dateStr.trim().isEmpty()) {
+                        dateStr = java.time.LocalDate.now().toString();
+                    }
+                    order.setOrderDate(dateStr);
+
                     try { order.setStatus(OrderStatus.valueOf(map.getOrDefault("status", "PENDING"))); } catch (Exception e) { order.setStatus(OrderStatus.PENDING); }
+
+                    if (map.containsKey("totalAmount")) {
+                        try { order.setTotalAmount(Double.parseDouble(map.get("totalAmount"))); } catch (Exception ignored) {}
+                    }
+
+                    if (map.containsKey("items") && map.get("items") != null) {
+                        List<OrderItem> parsedItems = parseOrderItems(map.get("items"));
+                        if (!parsedItems.isEmpty()) {
+                            order.setItems(parsedItems);
+                        }
+                    }
+
                     order.recalculateTotal();
+                    if (map.containsKey("totalAmount") && order.getTotalAmount() == 0.0) {
+                        try { order.setTotalAmount(Double.parseDouble(map.get("totalAmount"))); } catch (Exception ignored) {}
+                    }
+
                     Order saved = orderRepository.save(order);
                     sendJsonResponse(exchange, 200, SlmsApplication.toJson(saved));
                 } else if ("PATCH".equalsIgnoreCase(method)) {
@@ -263,6 +290,33 @@ public class OrderModule {
         private String readBody(HttpExchange exchange) throws IOException {
             InputStream is = exchange.getRequestBody();
             return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        }
+
+        private static List<OrderItem> parseOrderItems(String jsonArray) {
+            List<OrderItem> list = new ArrayList<>();
+            if (jsonArray == null || jsonArray.trim().isEmpty()) return list;
+            String inner = jsonArray.trim();
+            if (inner.startsWith("[")) inner = inner.substring(1);
+            if (inner.endsWith("]")) inner = inner.substring(0, inner.length() - 1);
+
+            String[] objects = inner.split("(?<=\\}),\\s*(?=\\{)");
+            for (String objStr : objects) {
+                if (objStr.trim().isEmpty()) continue;
+                Map<String, String> itemMap = SlmsApplication.parseJsonMap(objStr);
+                String prodId = itemMap.getOrDefault("productId", itemMap.getOrDefault("id", "PRD-1001"));
+                String prodName = itemMap.getOrDefault("productName", itemMap.getOrDefault("name", "Product"));
+                int qty = 1;
+                try { qty = Integer.parseInt(itemMap.getOrDefault("quantity", "1")); } catch (Exception ignored) {}
+                double price = 0.0;
+                try { price = Double.parseDouble(itemMap.getOrDefault("unitPrice", itemMap.getOrDefault("price", "0.0"))); } catch (Exception ignored) {}
+
+                OrderItem item = new OrderItem(prodId, prodName, qty, price);
+                if (itemMap.containsKey("subtotal")) {
+                    try { item.setSubtotal(Double.parseDouble(itemMap.get("subtotal"))); } catch (Exception ignored) {}
+                }
+                list.add(item);
+            }
+            return list;
         }
 
         private void sendJsonResponse(HttpExchange exchange, int statusCode, String json) throws IOException {

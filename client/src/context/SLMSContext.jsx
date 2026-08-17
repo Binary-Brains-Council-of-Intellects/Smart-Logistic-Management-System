@@ -248,30 +248,37 @@ export const SLMSProvider = ({ children }) => {
   // --- Order CRUD Operations ---
   const createOrder = async (orderData) => {
     const payload = {
-      customerId: orderData.customerId || 'CUST-001',
-      pricingStrategy: orderData.pricingStrategy || 'REGULAR',
-      notes: orderData.notes || '',
+      customerName: orderData.customerName || 'Walk-in Customer',
+      orderDate: orderData.orderDate || new Date().toISOString().split('T')[0],
+      status: orderData.status || 'PENDING',
+      totalAmount: Number(orderData.totalAmount || (orderData.items ? orderData.items.reduce((sum, i) => sum + (i.subtotal || 0), 0) : 0)),
       items: (orderData.items || []).map((item) => ({
         productId: item.productId || item.id,
-        quantity: Number(item.quantity || 1)
+        productName: item.productName || item.name || 'Product',
+        quantity: Number(item.quantity || 1),
+        unitPrice: Number(item.unitPrice || 0),
+        subtotal: Number(item.subtotal || (Number(item.quantity || 1) * Number(item.unitPrice || 0)))
       }))
     };
 
     try {
       const created = await apiService.createOrder(payload);
       const normalized = normalizeOrder(created);
-      setOrders((prev) => [normalized, ...prev]);
-      // Refresh products state because backend automatically deducted stock
-      apiService.getProducts().then((prods) => setProducts(prods.map(normalizeProduct))).catch(() => {});
-      return normalized;
+
+      const finalOrder = {
+        ...normalized,
+        customerName: normalized.customerName && normalized.customerName !== 'Walk-in Customer' ? normalized.customerName : payload.customerName,
+        items: Array.isArray(normalized.items) && normalized.items.length > 0 ? normalized.items : payload.items,
+        totalAmount: normalized.totalAmount || payload.totalAmount
+      };
+
+      setOrders((prev) => [finalOrder, ...prev]);
+      return finalOrder;
     } catch (err) {
       console.warn('Backend create order error, storing locally:', err.message);
       const fallback = normalizeOrder({
-        ...orderData,
         id: `ORD-${Math.floor(9000 + Math.random() * 1000)}`,
-        orderDate: new Date().toISOString().split('T')[0],
-        status: 'PENDING',
-        totalAmount: orderData.items ? orderData.items.reduce((sum, i) => sum + (i.subtotal || 0), 0) : 0
+        ...payload
       });
       setOrders((prev) => [fallback, ...prev]);
       return fallback;
