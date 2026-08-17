@@ -247,16 +247,14 @@ export const SLMSProvider = ({ children }) => {
   const deductStock = async (id, quantity) => {
     const qty = Number(quantity || 1);
 
-    // Optimistically update products state locally
+    // Optimistically update products state locally (only reduce availableQuantity, preserve totalQuantity)
     setProducts((prev) =>
       prev.map((item) => {
         if (item.id === id || item.productId === id) {
           const currentAvail = Number(item.availableQuantity !== undefined ? item.availableQuantity : item.totalQuantity || 0);
-          const currentTotal = Number(item.totalQuantity !== undefined ? item.totalQuantity : item.availableQuantity || 0);
           return {
             ...item,
-            availableQuantity: Math.max(0, currentAvail - qty),
-            totalQuantity: Math.max(0, currentTotal - qty)
+            availableQuantity: Math.max(0, currentAvail - qty)
           };
         }
         return item;
@@ -456,23 +454,33 @@ export const SLMSProvider = ({ children }) => {
   // --- Review Operations ---
   const addReview = async (revData) => {
     const payload = {
+      id: revData.id,
       productId: revData.productId,
-      customerId: revData.customerId || 'CUST-001',
+      productName: revData.productName || 'Product',
+      customerName: revData.customerName || 'Customer',
       rating: Number(revData.rating || 5),
+      reviewDate: revData.reviewDate || new Date().toISOString().split('T')[0],
       comment: revData.comment || ''
     };
 
     try {
       const created = await apiService.createReview(payload);
-      setReviews((prev) => [created, ...prev]);
+      const finalRev = {
+        ...created,
+        productName: created.productName && created.productName !== 'Product' ? created.productName : payload.productName,
+        customerName: created.customerName && created.customerName !== 'Customer' ? created.customerName : payload.customerName,
+        reviewDate: created.reviewDate || payload.reviewDate
+      };
+      setReviews((prev) => [finalRev, ...prev]);
+      return finalRev;
     } catch (err) {
       console.warn('Backend review error, storing locally:', err.message);
       const fallback = {
-        ...revData,
-        id: `REV-${Math.floor(300 + Math.random() * 700)}`,
-        reviewDate: new Date().toISOString().split('T')[0]
+        ...payload,
+        id: payload.id || `REV-${Math.floor(300 + Math.random() * 700)}`
       };
       setReviews((prev) => [fallback, ...prev]);
+      return fallback;
     }
   };
 

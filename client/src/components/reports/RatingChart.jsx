@@ -11,13 +11,24 @@ import { Bar } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
-const RatingChart = () => {
+const RatingChart = ({ reviews = [] }) => {
+  const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+
+  if (Array.isArray(reviews) && reviews.length > 0) {
+    reviews.forEach((r) => {
+      const rating = Math.round(Number(r.rating || 5));
+      if (counts[rating] !== undefined) {
+        counts[rating] += 1;
+      }
+    });
+  }
+
   const chartData = {
     labels: ['5 Stars', '4 Stars', '3 Stars', '2 Stars', '1 Star'],
     datasets: [
       {
         label: 'Review Count',
-        data: [18, 9, 3, 1, 1],
+        data: [counts[5], counts[4], counts[3], counts[2], counts[1]],
         backgroundColor: ['#f59e0b', '#fbbf24', '#fcd34d', '#cbd5e1', '#f87171'],
         borderRadius: 6
       }
@@ -31,7 +42,7 @@ const RatingChart = () => {
       legend: { display: false }
     },
     scales: {
-      y: { grid: { color: '#f1f5f9' }, ticks: { stepSize: 5 } },
+      y: { grid: { color: '#f1f5f9' }, ticks: { stepSize: 1 } },
       x: { grid: { display: false } }
     }
   };

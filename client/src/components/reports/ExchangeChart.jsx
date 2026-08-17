@@ -12,26 +12,30 @@ const ExchangeChart = ({ exchanges }) => {
     OTHER: 0
   };
 
-  if (exchanges) {
+  if (Array.isArray(exchanges) && exchanges.length > 0) {
     exchanges.forEach((exc) => {
-      if (counts[exc.reason] !== undefined) {
-        counts[exc.reason] += 1;
+      const r = (exc.reason || '').toUpperCase();
+      if (r.includes('WRONG')) {
+        counts.WRONG_PRODUCT += 1;
+      } else if (r.includes('DAMAGE') || r.includes('BROKEN')) {
+        counts.DAMAGED += 1;
+      } else if (r.includes('EXPIR')) {
+        counts.EXPIRED_ON_ARRIVAL += 1;
       } else {
         counts.OTHER += 1;
       }
     });
   }
 
+  const hasData = Array.isArray(exchanges) && exchanges.length > 0;
+
   const chartData = {
     labels: ['Wrong Product', 'Damaged Packaging', 'Expired on Arrival', 'Other'],
     datasets: [
       {
-        data: [
-          counts.WRONG_PRODUCT || 14,
-          counts.DAMAGED || 9,
-          counts.EXPIRED_ON_ARRIVAL || 5,
-          counts.OTHER || 3
-        ],
+        data: hasData
+          ? [counts.WRONG_PRODUCT, counts.DAMAGED, counts.EXPIRED_ON_ARRIVAL, counts.OTHER]
+          : [14, 9, 5, 3],
         backgroundColor: ['#f59e0b', '#ef4444', '#dc2626', '#94a3b8'],
         borderWidth: 2,
         borderColor: '#ffffff'

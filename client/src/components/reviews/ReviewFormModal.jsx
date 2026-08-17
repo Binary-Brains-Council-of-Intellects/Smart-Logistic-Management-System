@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../common/Modal';
 import { Star } from 'lucide-react';
 import { useSLMS } from '../../context/SLMSContext';
@@ -21,17 +21,27 @@ const ReviewFormModal = ({ isOpen, onClose, onSave }) => {
     return Object.keys(err).length === 0;
   };
 
+  useEffect(() => {
+    if (products && products.length > 0 && !productId) {
+      setProductId(products[0].id || products[0].productId || '');
+    }
+  }, [products, productId]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validate()) {
-      const selectedProd = products.find((p) => p.id === productId);
+      const activeProdId = productId || (products[0]?.id || products[0]?.productId || '');
+      const selectedProd = products.find(
+        (p) => String(p.id || p.productId) === String(activeProdId)
+      );
+
       onSave({
-        productId,
+        productId: activeProdId,
         productName: selectedProd ? selectedProd.name : 'Product',
-        customerName,
+        customerName: customerName.trim(),
         rating,
         reviewDate,
-        comment
+        comment: comment.trim()
       });
       setCustomerName('');
       setComment('');

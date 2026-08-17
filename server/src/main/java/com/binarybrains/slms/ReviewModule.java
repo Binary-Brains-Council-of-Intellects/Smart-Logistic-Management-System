@@ -216,7 +216,7 @@ public class ReviewModule {
                 rev.setProductName(map.getOrDefault("productName", "Product"));
                 rev.setCustomerName(map.getOrDefault("customerName", "Customer"));
                 rev.setRating(map.containsKey("rating") ? Integer.parseInt(map.get("rating")) : 5);
-                rev.setReviewDate(map.getOrDefault("reviewDate", "2026-08-16"));
+                rev.setReviewDate(map.containsKey("reviewDate") ? map.get("reviewDate") : java.time.LocalDate.now().toString());
                 rev.setComment(map.getOrDefault("comment", "Great product!"));
                 Review saved = reviewRepository.save(rev);
                 sendJsonResponse(exchange, 200, SlmsApplication.toJson(saved));
