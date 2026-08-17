@@ -103,7 +103,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
           title="Total Products"
-          value={totalProductsCount || 248}
+          value={totalProductsCount ?? 0}
           subtitle="Products in catalog"
           icon={Package}
           badgeText="Active Catalog"
@@ -111,7 +111,7 @@ const Dashboard = () => {
         />
         <StatCard
           title="Available Stock"
-          value={(availableStockCount || 12480).toLocaleString()}
+          value={(availableStockCount ?? 0).toLocaleString()}
           subtitle="Units currently available"
           icon={Boxes}
           badgeText="Warehouse Stock"
@@ -119,7 +119,7 @@ const Dashboard = () => {
         />
         <StatCard
           title="Pending Orders"
-          value={pendingOrdersCount || 18}
+          value={pendingOrdersCount ?? 0}
           subtitle="Orders awaiting confirmation"
           icon={ShoppingCart}
           badgeText="Action Required"
@@ -127,7 +127,7 @@ const Dashboard = () => {
         />
         <StatCard
           title="Monthly Revenue"
-          value={`৳${(monthlyRevenueTotal || 485200).toLocaleString()}`}
+          value={`৳${(monthlyRevenueTotal ?? 0).toLocaleString()}`}
           subtitle="Current month total"
           icon={DollarSign}
           badgeText="+14% YoY"
@@ -135,7 +135,7 @@ const Dashboard = () => {
         />
         <StatCard
           title="Active Employees"
-          value={activeEmployeesCount || 32}
+          value={activeEmployeesCount ?? 0}
           subtitle="Currently active workforce"
           icon={Users}
           badgeText="On Duty"
@@ -143,7 +143,7 @@ const Dashboard = () => {
         />
         <StatCard
           title="Low Stock Items"
-          value={lowStockItems.length || 7}
+          value={lowStockItems.length}
           subtitle="Products need reorder attention"
           icon={AlertTriangle}
           badgeText="Attention Required"
