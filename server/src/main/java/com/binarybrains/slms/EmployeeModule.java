@@ -390,7 +390,7 @@ public class EmployeeModule {
             for (Employee emp : employees) {
                 List<Attendance> logs = attendanceRepository.findByEmployeeId(emp.getId());
                 double recordedHours = logs.stream().mapToDouble(Attendance::getHoursWorked).sum();
-                double totalHours = recordedHours > 0 ? recordedHours + 150 : 168.0;
+                double totalHours = recordedHours;
                 payrollList.add(new PayrollSummary(emp.getId(), emp.getName(), emp.getDesignation(), totalHours, emp.getHourlyRate()));
             }
 

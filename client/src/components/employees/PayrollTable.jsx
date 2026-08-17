@@ -2,14 +2,23 @@ import React from 'react';
 
 const PayrollTable = ({ employees, attendance }) => {
   const payrollData = employees.map((emp) => {
-    const empAttendance = attendance.filter((a) => a.employeeId === emp.id);
+    const empId = String(emp.id || emp.employeeId);
+    const empAttendance = attendance.filter(
+      (a) => String(a.employeeId) === empId || (a.employeeName && emp.name && a.employeeName.toLowerCase() === emp.name.toLowerCase())
+    );
     const recordedHours = empAttendance.reduce((sum, a) => sum + Number(a.hoursWorked || 0), 0);
-    const totalHoursWorked = recordedHours > 0 ? recordedHours + 150 : 168;
-    const monthlySalary = totalHoursWorked * Number(emp.hourlyRate);
+    const totalHoursWorked = recordedHours;
+    const rate = Number(emp.hourlyRate !== undefined ? emp.hourlyRate : 200);
+    const monthlySalary = totalHoursWorked * rate;
 
     return {
       ...emp,
+      id: emp.id || emp.employeeId,
+      name: emp.name || 'Employee',
+      designation: emp.designation || 'Warehouse Operator',
+      recordedHours,
       totalHoursWorked,
+      hourlyRate: rate,
       monthlySalary
     };
   });
