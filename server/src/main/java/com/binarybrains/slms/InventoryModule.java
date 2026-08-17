@@ -202,7 +202,7 @@ public class InventoryModule {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
-            exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+            exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
             exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "*");
 
             String method = exchange.getRequestMethod();
@@ -265,6 +265,28 @@ public class InventoryModule {
                         productRepository.save(prod);
                         sendJsonResponse(exchange, 200, SlmsApplication.toJson(prod));
                     }
+                } else if ("PATCH".equalsIgnoreCase(method)) {
+                    if (id != null) {
+                        Optional<Product> existingOpt = productRepository.findById(id);
+                        if (existingOpt.isPresent()) {
+                            Product prod = existingOpt.get();
+                            String body = readRequestBody(exchange);
+                            Map<String, String> map = SlmsApplication.parseJsonMap(body);
+                            int qty = map.containsKey("quantity") ? Integer.parseInt(map.get("quantity")) : 1;
+
+                            if (path.contains("/deduct-stock")) {
+                                prod.setAvailableQuantity(Math.max(0, prod.getAvailableQuantity() - qty));
+                                prod.setTotalQuantity(Math.max(0, prod.getTotalQuantity() - qty));
+                            } else if (path.contains("/add-stock")) {
+                                prod.setAvailableQuantity(prod.getAvailableQuantity() + qty);
+                                prod.setTotalQuantity(prod.getTotalQuantity() + qty);
+                            }
+                            productRepository.save(prod);
+                            sendJsonResponse(exchange, 200, SlmsApplication.toJson(prod));
+                            return;
+                        }
+                    }
+                    sendJsonResponse(exchange, 404, "{\"error\":\"Product not found\"}");
                 } else if ("DELETE".equalsIgnoreCase(method)) {
                     if (id != null && productRepository.deleteById(id)) {
                         exchange.sendResponseHeaders(204, -1);

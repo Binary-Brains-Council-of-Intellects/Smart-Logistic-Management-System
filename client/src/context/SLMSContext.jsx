@@ -220,23 +220,28 @@ export const SLMSProvider = ({ children }) => {
   };
 
   const deductStock = async (id, quantity) => {
+    const qty = Number(quantity || 1);
+
+    // Optimistically update products state locally
+    setProducts((prev) =>
+      prev.map((item) => {
+        if (item.id === id || item.productId === id) {
+          const currentAvail = Number(item.availableQuantity !== undefined ? item.availableQuantity : item.totalQuantity || 0);
+          const currentTotal = Number(item.totalQuantity !== undefined ? item.totalQuantity : item.availableQuantity || 0);
+          return {
+            ...item,
+            availableQuantity: Math.max(0, currentAvail - qty),
+            totalQuantity: Math.max(0, currentTotal - qty)
+          };
+        }
+        return item;
+      })
+    );
+
     try {
-      const updated = await apiService.deductStock(id, quantity);
-      const normalized = normalizeProduct(updated);
-      setProducts((prev) => prev.map((item) => (item.id === id || item.productId === id ? normalized : item)));
+      await apiService.deductStock(id, qty);
     } catch (err) {
-      console.warn('Backend deduct stock error, updating locally:', err.message);
-      setProducts((prev) =>
-        prev.map((item) => {
-          if (item.id === id || item.productId === id) {
-            return {
-              ...item,
-              availableQuantity: Math.max(0, Number(item.availableQuantity || 0) - Number(quantity))
-            };
-          }
-          return item;
-        })
-      );
+      console.warn('Backend deduct stock warning:', err.message);
     }
   };
 
@@ -274,6 +279,8 @@ export const SLMSProvider = ({ children }) => {
   };
 
   const updateOrderStatus = async (id, newStatus) => {
+    const targetOrder = orders.find((o) => o.id === id);
+
     try {
       const updated = await apiService.updateOrderStatus(id, newStatus);
       const normalized = normalizeOrder(updated);
@@ -283,6 +290,28 @@ export const SLMSProvider = ({ children }) => {
       setOrders((prev) =>
         prev.map((order) => (order.id === id ? { ...order, status: newStatus } : order))
       );
+    }
+
+    // Automatically deduct product stock when order is dispatched
+    if (targetOrder && newStatus === 'DISPATCHED' && targetOrder.status !== 'DISPATCHED') {
+      if (Array.isArray(targetOrder.items) && targetOrder.items.length > 0) {
+        targetOrder.items.forEach((item) => {
+          const itemProdId = item.productId || item.id;
+          const qty = Number(item.quantity || 1);
+
+          const matchedProd = products.find(
+            (p) =>
+              (p.id && String(p.id).toLowerCase() === String(itemProdId).toLowerCase()) ||
+              (p.productId && String(p.productId).toLowerCase() === String(itemProdId).toLowerCase()) ||
+              (p.name && item.productName && p.name.toLowerCase() === item.productName.toLowerCase())
+          );
+
+          if (matchedProd) {
+            const prodId = matchedProd.id || matchedProd.productId;
+            deductStock(prodId, qty);
+          }
+        });
+      }
     }
   };
 
