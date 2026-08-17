@@ -452,26 +452,42 @@ export const SLMSProvider = ({ children }) => {
 
   // --- Attendance Operations ---
   const addAttendanceRecord = async (attData) => {
+    const matchedEmp = employees.find(
+      (e) => String(e.id || e.employeeId) === String(attData.employeeId)
+    );
+
     const payload = {
+      id: attData.id,
       employeeId: attData.employeeId,
+      employeeName: attData.employeeName || (matchedEmp ? matchedEmp.name : 'Employee'),
       date: attData.date || new Date().toISOString().split('T')[0],
       status: attData.status || 'PRESENT',
-      checkIn: attData.checkIn || '09:00:00',
-      checkOut: attData.checkOut || '17:00:00',
+      checkIn: attData.checkIn || '09:00',
+      checkOut: attData.checkOut || '17:00',
+      hoursWorked: Number(attData.hoursWorked || 8),
       notes: attData.notes || ''
     };
 
     try {
       const created = await apiService.recordAttendance(payload);
-      setAttendance((prev) => [created, ...prev]);
+      const finalAtt = {
+        ...created,
+        employeeName: created.employeeName && created.employeeName !== 'Employee' ? created.employeeName : payload.employeeName,
+        hoursWorked: created.hoursWorked !== undefined && created.hoursWorked > 0 ? created.hoursWorked : payload.hoursWorked,
+        checkIn: created.checkIn || payload.checkIn,
+        checkOut: created.checkOut || payload.checkOut,
+        date: created.date || payload.date
+      };
+      setAttendance((prev) => [finalAtt, ...prev]);
+      return finalAtt;
     } catch (err) {
       console.warn('Backend attendance error, storing locally:', err.message);
       const fallback = {
-        ...attData,
-        id: `ATT-${Math.floor(500 + Math.random() * 500)}`,
-        hoursWorked: Number(attData.hoursWorked || 8)
+        ...payload,
+        id: payload.id || `ATT-${Math.floor(500 + Math.random() * 500)}`
       };
       setAttendance((prev) => [fallback, ...prev]);
+      return fallback;
     }
   };
 

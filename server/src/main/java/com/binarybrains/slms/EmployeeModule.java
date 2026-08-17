@@ -355,10 +355,14 @@ public class EmployeeModule {
                 att.setId(map.containsKey("id") && !map.get("id").isEmpty() ? map.get("id") : "ATT-" + (int)(500 + Math.random() * 500));
                 att.setEmployeeId(map.getOrDefault("employeeId", "EMP-201"));
                 att.setEmployeeName(map.getOrDefault("employeeName", "Employee"));
-                att.setDate(map.getOrDefault("date", "2026-08-16"));
+                att.setDate(map.containsKey("date") ? map.get("date") : java.time.LocalDate.now().toString());
                 att.setCheckIn(map.getOrDefault("checkIn", "09:00"));
                 att.setCheckOut(map.getOrDefault("checkOut", "17:00"));
-                att.setHoursWorked(map.containsKey("hoursWorked") ? Double.parseDouble(map.get("hoursWorked")) : 8.0);
+                if (map.containsKey("hoursWorked")) {
+                    try { att.setHoursWorked(Double.parseDouble(map.get("hoursWorked"))); } catch (Exception ignored) {}
+                } else {
+                    att.setHoursWorked(8.0);
+                }
                 Attendance saved = attendanceRepository.save(att);
                 sendJsonResponse(exchange, 200, SlmsApplication.toJson(saved));
             }

@@ -37,15 +37,17 @@ const AttendanceFormModal = ({ isOpen, onClose, onSave, preselectedEmployee }) =
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const selectedEmp = employees.find((emp) => emp.id === employeeId);
-    if (!selectedEmp) return;
+    const activeEmpId = employeeId || (employees[0]?.id || employees[0]?.employeeId || '');
+    const selectedEmp = employees.find(
+      (emp) => String(emp.id || emp.employeeId) === String(activeEmpId)
+    );
 
     onSave({
-      employeeId: selectedEmp.id,
-      employeeName: selectedEmp.name,
-      date,
-      checkIn,
-      checkOut,
+      employeeId: activeEmpId,
+      employeeName: selectedEmp ? selectedEmp.name : 'Employee',
+      date: date || new Date().toISOString().split('T')[0],
+      checkIn: checkIn || '09:00',
+      checkOut: checkOut || '17:00',
       hoursWorked: computedHours
     });
     onClose();
